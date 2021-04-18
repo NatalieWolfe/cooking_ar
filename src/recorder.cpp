@@ -1,25 +1,20 @@
-#include <cstdlib>
+#include <atomic>
+#include <condition_variable>
 #include <exception>
-#include <fcntl.h>
 #include <filesystem>
-#include <ios>
-#include <iostream>
-#include <linux/v4l2-common.h>
-#include <linux/videodev2.h>
-#include <regex>
-#include <sys/ioctl.h>
-#include <vector>
-
 #include <functional>
+#include <iostream>
 #include <mutex>
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/videoio.hpp>
 #include <thread>
+#include <vector>
 
+#include "src/cameras.h"
 #include "src/timing.h"
 
-static std::size_t frame_counter = 0;
+static std::atomic_size_t frame_counter = 0;
 const std::filesystem::path recording_dir{"recording"};
 
 class Camera {
@@ -47,11 +42,11 @@ public:
   }
 
   void capture() { _trigger_action(Action::CAPTURE); }
+
   cv::Mat last_capture() {
     cv::Mat image;
     {
       std::unique_lock<std::mutex> lock{_action_mutex};
-      // _last_capture.copyTo(image);
       _last_frame.copyTo(image);
     }
     return image;
@@ -105,47 +100,24 @@ private:
   cv::Mat _last_frame;
 };
 
-std::vector<int> get_camera_ids() {
-  std::vector<int> camera_ids;
-
-  std::regex video_pattern{"/dev/video(\\d+)"};
-  std::filesystem::path devices = "/dev";
-  for (
-    const std::filesystem::directory_entry& device :
-    std::filesystem::directory_iterator(devices)
-  ) {
-    const auto& device_path_str = device.path().string();
-    std::smatch m;
-    if (!std::regex_match(device_path_str, m, video_pattern)) continue;
-
-    int device_fd = open(device_path_str.c_str(), O_RDWR);
-    if (device_fd < 0) throw std::runtime_error("Failed to open device.");
-
-    v4l2_capability capability;
-    if (ioctl(device_fd, VIDIOC_QUERYCAP, &capability) < 0) {
-      throw std::runtime_error("Failed to query device capabilities.");
-    }
-    if ((capability.device_caps & V4L2_CAP_VIDEO_CAPTURE) == 0) continue;
-
-    int camera_id = std::strtol(m[1].str().c_str(), nullptr, 10);
-    camera_ids.push_back(camera_id);
-  }
-
-  camera_ids.shrink_to_fit();
-  return camera_ids;
-}
-
 int main(int argc, char* argv[]) {
-  const std::vector<int>& camera_ids = get_camera_ids();
+  const std::vector<CameraDevice>& devices = get_camera_devices();
   std::vector<std::unique_ptr<Camera>> cameras;
-  cameras.reserve(camera_ids.size());
-  for (const int id : camera_ids) {
-    cameras.push_back(std::make_unique<Camera>(id));
+  cameras.reserve(devices.size());
+  for (const CameraDevice& device : devices) {
+    std::cout << device.device_path.string() << ": " << device.name << std::endl;
+    cameras.push_back(std::make_unique<Camera>(device.camera_id));
   }
+
+  // Make an initial capture and pause to wake up all the cameras.
+  for (std::unique_ptr<Camera>& camera : cameras) {
+    camera->capture();
+  }
+  std::this_thread::sleep_for(std::chrono::seconds(1));
 
   auto start = steady_clock::now();
-  auto frame_duration = std::chrono::nanoseconds(33333333);
-  for (; frame_counter < 30 * 30; ++frame_counter) {
+  auto frame_duration = std::chrono::nanoseconds(33333333); // 30 fps
+  for (; frame_counter < 1000; ++frame_counter) {
     auto next_shot = start + (frame_duration * (frame_counter + 1));
     for (std::unique_ptr<Camera>& camera : cameras) {
       camera->capture();

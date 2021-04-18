@@ -10,6 +10,17 @@ cc_binary(
   ],
 )
 
+cc_library(
+  name = "cameras",
+  hdrs = ["cameras.h"],
+  srcs = ["cameras.cpp"],
+  linkopts = [
+    "-L/usr/local/lib",
+    "-pthread",
+    "-lopencv_world",
+  ],
+)
+
 cc_binary(
   name = "extractor",
   srcs = ["extractor.cpp"],
@@ -30,7 +41,10 @@ cc_binary(
     "-pthread",
     "-lopencv_world",
   ],
-  deps = [":timing"],
+  deps = [
+    ":cameras",
+    ":timing",
+  ],
 )
 
 cc_library(
