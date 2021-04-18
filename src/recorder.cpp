@@ -17,7 +17,7 @@
 #include <opencv2/videoio.hpp>
 #include <thread>
 
-#include <chrono>
+#include "src/timing.h"
 
 static std::size_t frame_counter = 0;
 const std::filesystem::path recording_dir{"recording"};
@@ -143,7 +143,7 @@ int main(int argc, char* argv[]) {
     cameras.push_back(std::make_unique<Camera>(id));
   }
 
-  auto start = std::chrono::steady_clock::now();
+  auto start = steady_clock::now();
   auto frame_duration = std::chrono::nanoseconds(33333333);
   for (; frame_counter < 30 * 30; ++frame_counter) {
     auto next_shot = start + (frame_duration * (frame_counter + 1));
@@ -152,7 +152,6 @@ int main(int argc, char* argv[]) {
     }
     std::this_thread::sleep_until(next_shot);
   }
-  auto elapsed = std::chrono::steady_clock::now() - start;
-  double fps = (frame_counter * 1000.0) / (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count());
-  std::cout << fps << "fps" << std::endl;
+  auto elapsed = steady_clock::now() - start;
+  std::cout << to_fps(frame_counter, elapsed) << "fps" << std::endl;
 }
