@@ -5,6 +5,7 @@ cc_binary(
   srcs = ["calibrator.cpp"],
   deps = [
     ":cameras",
+    ":files",
     "//third_party:opencv",
   ],
 )
@@ -27,11 +28,18 @@ cc_binary(
   ],
 )
 
+cc_library(
+  name = "files",
+  hdrs = ["files.h"],
+  srcs = ["files.cpp"],
+)
+
 cc_binary(
   name = "recorder",
   srcs = ["recorder.cpp"],
   deps = [
     ":cameras",
+    ":files",
     ":timing",
     "//third_party:opencv",
   ],

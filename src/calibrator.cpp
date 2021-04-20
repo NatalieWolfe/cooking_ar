@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "src/cameras.h"
+#include "src/files.h"
 
 constexpr std::size_t MIN_CALIBRATION_FRAMES = 5;
 
@@ -337,7 +338,7 @@ void run_camera_orientation(std::vector<CharucoCalibrator>& calibrators) {
         for (CharucoCalibrator& calibrator : calibrators) {
           save_camera_parameters(
             calibrator.parameters(),
-            std::to_string(calibrator.device().camera_id) + ".yml"
+            get_calibration_path(calibrator.device().camera_id)
           );
         }
         std::cout << "Camera parameters saved." << std::endl;

@@ -12,10 +12,10 @@
 #include <vector>
 
 #include "src/cameras.h"
+#include "src/files.h"
 #include "src/timing.h"
 
 static std::atomic_size_t frame_counter = 0;
-const std::filesystem::path recording_dir{"recording"};
 
 class Camera {
 private:
@@ -26,14 +26,14 @@ private:
   };
 
 public:
-  explicit Camera(int camera_id): _camera_id{camera_id} {
+  explicit Camera(int camera_id):
+    _camera_id{camera_id},
+    _save_path{get_recordings_path(camera_id)}
+  {
     _camera_input.open(_camera_id);
     _camera_input.set(cv::CAP_PROP_FRAME_WIDTH, 640);
     _camera_input.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
     _thread = std::thread{std::bind(&Camera::_thread_loop, this)};
-
-    _save_path = recording_dir / std::to_string(_camera_id);
-    std::filesystem::create_directories(_save_path);
   }
 
   ~Camera() {
