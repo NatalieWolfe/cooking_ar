@@ -5,12 +5,32 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <linux/videodev2.h>
+#include <opencv2/core.hpp>
 #include <regex>
 #include <string>
 #include <sys/ioctl.h>
 #include <vector>
 
+namespace {
 namespace fs = std::filesystem;
+
+void write(cv::FileStorage& file, const CameraDevice& device) {
+  file.write("device_path", device.device_path.string());
+  file.write("camera_id", device.camera_id);
+  file.write("name", device.name);
+}
+
+void write(cv::FileStorage& file, const CameraParameters& parameters) {
+  file.startWriteStruct("device", cv::FileNode::MAP, "CameraDevice");
+  write(file, parameters.device);
+  file.endWriteStruct();
+  file.write("matrix", parameters.matrix);
+  file.write("distortion", parameters.distortion);
+  file.write("rotation", parameters.rotation);
+  file.write("translation", parameters.translation);
+}
+
+}
 
 std::vector<CameraDevice> get_camera_devices() {
   std::vector<CameraDevice> cameras;
@@ -40,4 +60,16 @@ std::vector<CameraDevice> get_camera_devices() {
 
   cameras.shrink_to_fit();
   return cameras;
+}
+
+void save_camera_parameters(
+  const CameraParameters& parameters,
+  const std::filesystem::path& filename
+) {
+  cv::FileStorage file{
+    filename.string(),
+    cv::FileStorage::WRITE | cv::FileStorage::FORMAT_YAML
+  };
+  write(file, parameters);
+  file.release();
 }

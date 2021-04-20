@@ -8,6 +8,7 @@ cc_binary(
     "-pthread",
     "-lopencv_world",
   ],
+  deps = [":cameras"],
 )
 
 cc_library(
