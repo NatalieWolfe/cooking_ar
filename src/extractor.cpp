@@ -10,16 +10,9 @@
 #include <string_view>
 #include <vector>
 
+#include "src/cameras.h"
+#include "src/files.h"
 #include "src/timing.h"
-
-double logitech_c920_matrix[] = {
-  5.6362511025205447e+02, 0.0, 3.3007199767054630e+02,
-  0.0, 5.6362511025205447e+02, 2.4955733002611402e+02,
-  0.0, 0.0, 1.0
-};
-double logitech_c920_distortion[] = {
-  0.0, -7.2044862679138386e-02, 0.0, 0.0
-};
 
 const std::filesystem::path model_dir = "/home/oz/work/ext/openpose/models";
 
@@ -39,29 +32,42 @@ void dump(
   }
 }
 
-int main(int argc, char* argv[]) {
-  if (argc != 2) {
-    std::cerr << "Usage: " << argv[0] << " <path_to_recording>" << std::endl;
-    return -1;
-  }
+struct Recording {
+  std::filesystem::path path;
+  std::vector<std::filesystem::path> image_files;
+  CameraParameters camera;
+  Rectifier rectifier;
+};
 
-  std::filesystem::path recording_dir = argv[1];
-  std::vector<std::vector<std::filesystem::path>> image_files;
+int main() {
+  std::vector<Recording> recordings;
   std::size_t image_count = 0;
-  for (const auto& cam_dir : std::filesystem::directory_iterator{recording_dir}) {
-    std::vector<std::filesystem::path>& paths = image_files.emplace_back();
+  auto recordings_iterator =
+    std::filesystem::directory_iterator{get_recordings_directory_path()};
+  for (const auto& cam_dir : recordings_iterator) {
+    Recording& recording = recordings.emplace_back(Recording{.path = cam_dir});
+    recording.camera = load_camera_parameters(
+      get_calibration_path(cam_dir.path().stem().string())
+    );
+
     for (const auto& entry : std::filesystem::directory_iterator{cam_dir}) {
-      if (entry.path().extension() == ".png") paths.push_back(entry.path());
+      if (entry.path().extension() == ".png") {
+        recording.image_files.push_back(entry.path());
+      }
     }
-    image_count += paths.size();
+
+    recording.rectifier = Rectifier{
+      recording.camera,
+      cv::imread(recording.image_files.front().string()).size()
+    };
+
+    image_count += recording.image_files.size();
     std::sort(
-      paths.begin(),
-      paths.end(),
+      recording.image_files.begin(),
+      recording.image_files.end(),
       [](const std::filesystem::path& a, const std::filesystem::path& b) {
-        int a_id =
-          std::strtol(a.filename().replace_extension().c_str(), nullptr, 10);
-        int b_id =
-          std::strtol(b.filename().replace_extension().c_str(), nullptr, 10);
+        int a_id = std::stoi(a.stem().string(), 0, 10);
+        int b_id = std::stoi(b.stem().string(), 0, 10);
         return a_id < b_id;
       }
     );
@@ -70,20 +76,8 @@ int main(int argc, char* argv[]) {
   for (std::size_t i = image_count; i >= 10; i /= 10) ++digits;
 
   std::cout
-    << "Processing " << image_count << " images from " << image_files.size()
+    << "Processing " << image_count << " images from " << recordings.size()
     << " cameras." << std::endl;
-
-  cv::Mat distorted_matrix{3, 3, CV_64F, &logitech_c920_matrix};
-  cv::Mat distortion{1, 4, CV_64F, &logitech_c920_distortion};
-  cv::Mat matrix;
-  cv::fisheye::estimateNewCameraMatrixForUndistortRectify(
-    distorted_matrix,
-    distortion,
-    cv::Size{640, 480},
-    cv::Matx33d::eye(),
-    matrix,
-    1
-  );
 
   op::WrapperStructPose pose_config;
   pose_config.modelFolder = model_dir.c_str();
@@ -108,7 +102,7 @@ int main(int argc, char* argv[]) {
   std::size_t processed_count = 0;
   std::size_t tracked_count = 0;
   auto start = steady_clock::now();
-  for (const auto& cam_dir : image_files) {
+  for (const Recording& recording : recordings) {
     op::Wrapper wrapper{op::ThreadManagerMode::Asynchronous};
     wrapper.configure(pose_config);
     wrapper.configure(face_config);
@@ -116,20 +110,11 @@ int main(int argc, char* argv[]) {
     wrapper.configure(extra_config);
     wrapper.start();
 
-    for (const auto& image_path : cam_dir) {
-      if (image_path.extension() != ".png") continue;
-
+    for (const auto& image_path : recording.image_files) {
       op::Matrix image;
       {
-        cv::Mat cv_image;
         cv::Mat raw_image = cv::imread(image_path.string());
-        cv::fisheye::undistortImage(
-          raw_image,
-          cv_image,
-          distorted_matrix,
-          distortion,
-          matrix
-        );
+        cv::Mat cv_image = recording.rectifier(raw_image);
         image = OP_CV2OPCONSTMAT(cv_image);
       }
 
@@ -145,7 +130,7 @@ int main(int argc, char* argv[]) {
         data_out.flush();
       }
 
-      if (++processed_count % 50 == 0) {
+      if (++processed_count % 100 == 0) {
         auto elapsed = steady_clock::now() - start;
         std::cout
           << std::setw(digits) << tracked_count << " / " << std::setw(digits)
@@ -157,4 +142,7 @@ int main(int argc, char* argv[]) {
     }
     wrapper.stop();
   }
+  std::cout
+    << "All frames processed in " << to_hms(steady_clock::now() - start)
+    << std::endl;
 }

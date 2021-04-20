@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <pwd.h>
 #include <string>
+#include <string_view>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -42,6 +43,11 @@ fs::path get_recordings_path(int camera_id) {
 }
 
 fs::path get_calibration_path(int camera_id) {
-  return
-    get_calibration_directory_path() / (std::to_string(camera_id) + ".yml");
+  return get_calibration_path(std::to_string(camera_id));
+}
+
+fs::path get_calibration_path(std::string_view camera_name) {
+  fs::path path = get_calibration_directory_path() / camera_name;
+  path.replace_extension(".yml");
+  return path;
 }

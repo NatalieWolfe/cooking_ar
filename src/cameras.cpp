@@ -5,7 +5,9 @@
 #include <fcntl.h>
 #include <filesystem>
 #include <linux/videodev2.h>
+#include <opencv2/calib3d.hpp>
 #include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 #include <regex>
 #include <string>
 #include <sys/ioctl.h>
@@ -28,6 +30,24 @@ void write(cv::FileStorage& file, const CameraParameters& parameters) {
   file.write("distortion", parameters.distortion);
   file.write("rotation", parameters.rotation);
   file.write("translation", parameters.translation);
+}
+
+CameraDevice read_device(const cv::FileNode& file) {
+  return CameraDevice{
+    .device_path = static_cast<std::string>(file["device_path"]),
+    .camera_id = static_cast<int>(file["camera_id"]),
+    .name = static_cast<std::string>(file["name"])
+  };
+}
+
+CameraParameters read_parameters(const cv::FileNode& file) {
+  return CameraParameters{
+    .device{read_device(file["device"])},
+    .matrix{file["matrix"].mat()},
+    .distortion{file["distortion"].mat()},
+    .rotation{file["rotation"].mat()},
+    .translation{file["translation"].mat()}
+  };
 }
 
 }
@@ -72,4 +92,46 @@ void save_camera_parameters(
   };
   write(file, parameters);
   file.release();
+}
+
+CameraParameters load_camera_parameters(const std::filesystem::path& filename) {
+  cv::FileStorage file{
+    filename.string(),
+    cv::FileStorage::READ | cv::FileStorage::FORMAT_YAML
+  };
+  return read_parameters(file.root());
+}
+
+Rectifier::Rectifier(CameraParameters parameters, cv::Size image_size):
+  _parameters{std::move(parameters)}
+{
+  _optimal_matrix = cv::getOptimalNewCameraMatrix(
+    _parameters.matrix,
+    _parameters.distortion,
+    image_size,
+    0.0,
+    image_size
+  );
+  cv::initUndistortRectifyMap(
+    _parameters.matrix,
+    _parameters.distortion,
+    cv::noArray(),
+    _optimal_matrix,
+    image_size,
+    CV_16SC2,
+    _undistorted_map_1,
+    _undistorted_map_2
+  );
+}
+
+cv::Mat Rectifier::rectify(const cv::Mat& image) const {
+  cv::Mat rectified;
+  cv::remap(
+    image,
+    rectified,
+    _undistorted_map_1,
+    _undistorted_map_2,
+    cv::INTER_CUBIC
+  );
+  return rectified;
 }

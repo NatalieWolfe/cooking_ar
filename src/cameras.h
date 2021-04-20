@@ -15,7 +15,6 @@ struct CameraParameters {
   CameraDevice device;
   cv::Mat matrix;
   cv::Mat distortion;
-  cv::Mat undistorted_matrix;
   cv::Mat rotation;
   cv::Mat translation;
 };
@@ -30,3 +29,24 @@ void save_camera_parameters(
   const CameraParameters& parameters,
   const std::filesystem::path& filename
 );
+
+class Rectifier {
+public:
+  Rectifier() = default;
+  ~Rectifier() = default;
+  Rectifier(const Rectifier&) = default;
+  Rectifier(Rectifier&&) = default;
+  Rectifier& operator=(const Rectifier&) = default;
+  Rectifier& operator=(Rectifier&&) = default;
+
+  explicit Rectifier(CameraParameters parameters, cv::Size image_size);
+
+  cv::Mat rectify(const cv::Mat& image) const;
+  cv::Mat operator()(const cv::Mat& image) const { return rectify(image); }
+
+private:
+  CameraParameters _parameters;
+  cv::Mat _undistorted_map_1;
+  cv::Mat _undistorted_map_2;
+  cv::Mat _optimal_matrix;
+};

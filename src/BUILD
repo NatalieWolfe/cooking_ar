@@ -22,6 +22,7 @@ cc_binary(
   srcs = ["extractor.cpp"],
   deps = [
     ":cameras",
+    ":files",
     ":timing",
     "//third_party:opencv",
     "//third_party:openpose",
