@@ -13,6 +13,7 @@
 #include "src/cameras.h"
 #include "src/files.h"
 #include "src/timing.h"
+#include "src/tracking.h"
 
 const std::filesystem::path model_dir = "/home/oz/work/ext/openpose/models";
 
@@ -22,70 +23,6 @@ struct Recording {
   CameraParameters camera;
   Rectifier rectifier;
 };
-
-struct Point {
-  int point_id;
-  double x;
-  double y;
-  double confidence;
-};
-
-struct Person {
-  int person_id;
-  std::vector<Point> body;
-  std::vector<Point> face;
-  std::vector<Point> right_paw;
-  std::vector<Point> left_paw;
-};
-
-void write(cv::FileStorage& file, const Point& point) {
-  file.write("point_id", point.point_id);
-  file.write("x", point.x);
-  file.write("y", point.y);
-  file.write("confidence", point.confidence);
-}
-
-void write(cv::FileStorage& file, const std::vector<Point>& points) {
-  for (const Point& point : points) {
-    file.startWriteStruct("", cv::FileNode::MAP, "Point");
-    write(file, point);
-    file.endWriteStruct();
-  }
-}
-
-void write(cv::FileStorage& file, const Person& person) {
-  file.write("person_id", person.person_id);
-  file.startWriteStruct("body", cv::FileNode::SEQ);
-  write(file, person.body);
-  file.endWriteStruct();
-  file.startWriteStruct("face", cv::FileNode::SEQ);
-  write(file, person.face);
-  file.endWriteStruct();
-  file.startWriteStruct("right_paw", cv::FileNode::SEQ);
-  write(file, person.right_paw);
-  file.endWriteStruct();
-  file.startWriteStruct("left_paw", cv::FileNode::SEQ);
-  write(file, person.left_paw);
-  file.endWriteStruct();
-}
-
-void save_people(
-  const std::vector<Person>& people,
-  const std::filesystem::path& filename
-) {
-  cv::FileStorage file{
-    filename.string(),
-    cv::FileStorage::WRITE | cv::FileStorage::FORMAT_YAML
-  };
-  file.startWriteStruct("people", cv::FileNode::SEQ);
-  for (const Person& person : people) {
-    file.startWriteStruct("", cv::FileNode::MAP, "Person");
-    write(file, person);
-    file.endWriteStruct();
-  }
-  file.endWriteStruct();
-  file.release();
-}
 
 std::vector<Point> to_points(const op::Array<float>& keypoints, int person_id) {
   std::vector<Point> points;

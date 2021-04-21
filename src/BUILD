@@ -24,6 +24,7 @@ cc_binary(
     ":cameras",
     ":files",
     ":timing",
+    ":tracking",
     "//third_party:opencv",
     "//third_party:openpose",
   ],
@@ -33,6 +34,16 @@ cc_library(
   name = "files",
   hdrs = ["files.h"],
   srcs = ["files.cpp"],
+)
+
+cc_binary(
+  name = "projector",
+  srcs = ["projector.cpp"],
+  deps = [
+    ":cameras",
+    ":files",
+    ":tracking",
+  ],
 )
 
 cc_binary(
@@ -50,6 +61,13 @@ cc_library(
   name = "timing",
   hdrs = ["timing.h"],
   srcs = ["timing.cpp"],
+)
+
+cc_library(
+  name = "tracking",
+  hdrs = ["tracking.h"],
+  srcs = ["tracking.cpp"],
+  deps = ["//third_party:opencv"],
 )
 
 cc_binary(
