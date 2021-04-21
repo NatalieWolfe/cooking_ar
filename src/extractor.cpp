@@ -16,28 +16,116 @@
 
 const std::filesystem::path model_dir = "/home/oz/work/ext/openpose/models";
 
-void dump(
-  std::ofstream& out,
-  std::string_view part,
-  const op::Array<float>& keypoints
-) {
-  for (int person = 0; person < keypoints.getSize(0); ++person) {
-    for (int point = 0; point < keypoints.getSize(1); ++point) {
-      out << person << ',' << part << ',' << point;
-      for (int xyscore = 0; xyscore < keypoints.getSize(2); ++xyscore) {
-        out << ',' << keypoints[{person, point, xyscore}];
-      }
-      out << '\n';
-    }
-  }
-}
-
 struct Recording {
   std::filesystem::path path;
   std::vector<std::filesystem::path> image_files;
   CameraParameters camera;
   Rectifier rectifier;
 };
+
+struct Point {
+  int point_id;
+  double x;
+  double y;
+  double confidence;
+};
+
+struct Person {
+  int person_id;
+  std::vector<Point> body;
+  std::vector<Point> face;
+  std::vector<Point> right_paw;
+  std::vector<Point> left_paw;
+};
+
+void write(cv::FileStorage& file, const Point& point) {
+  file.write("point_id", point.point_id);
+  file.write("x", point.x);
+  file.write("y", point.y);
+  file.write("confidence", point.confidence);
+}
+
+void write(cv::FileStorage& file, const std::vector<Point>& points) {
+  for (const Point& point : points) {
+    file.startWriteStruct("", cv::FileNode::MAP, "Point");
+    write(file, point);
+    file.endWriteStruct();
+  }
+}
+
+void write(cv::FileStorage& file, const Person& person) {
+  file.write("person_id", person.person_id);
+  file.startWriteStruct("body", cv::FileNode::SEQ);
+  write(file, person.body);
+  file.endWriteStruct();
+  file.startWriteStruct("face", cv::FileNode::SEQ);
+  write(file, person.face);
+  file.endWriteStruct();
+  file.startWriteStruct("right_paw", cv::FileNode::SEQ);
+  write(file, person.right_paw);
+  file.endWriteStruct();
+  file.startWriteStruct("left_paw", cv::FileNode::SEQ);
+  write(file, person.left_paw);
+  file.endWriteStruct();
+}
+
+void save_people(
+  const std::vector<Person>& people,
+  const std::filesystem::path& filename
+) {
+  cv::FileStorage file{
+    filename.string(),
+    cv::FileStorage::WRITE | cv::FileStorage::FORMAT_YAML
+  };
+  file.startWriteStruct("people", cv::FileNode::SEQ);
+  for (const Person& person : people) {
+    file.startWriteStruct("", cv::FileNode::MAP, "Person");
+    write(file, person);
+    file.endWriteStruct();
+  }
+  file.endWriteStruct();
+  file.release();
+}
+
+std::vector<Point> to_points(const op::Array<float>& keypoints, int person_id) {
+  std::vector<Point> points;
+  for (int point_idx = 0; point_idx < keypoints.getSize(1); ++point_idx) {
+    Point& point = points.emplace_back(Point{.point_id = point_idx});
+    point.x = keypoints[{person_id, point_idx, 0}];
+    point.y = keypoints[{person_id, point_idx, 1}];
+    point.confidence = keypoints[{person_id, point_idx, 2}];
+  }
+  return points;
+}
+
+void dump(const std::filesystem::path& filename, const op::Datum& data) {
+  std::vector<Person> people;
+  for (int i = 0; i < data.poseKeypoints.getSize(0); ++i) {
+    Person& person = people.emplace_back();
+    person.person_id = i;
+    person.body = to_points(data.poseKeypoints, i);
+  }
+  for (int i = 0; i < data.faceKeypoints.getSize(0); ++i) {
+    if (static_cast<std::size_t>(i) > people.size()) {
+      people.push_back({.person_id = i});
+    }
+    people[i].face = to_points(data.faceKeypoints, i);
+  }
+  for (int i = 0; i < data.handKeypoints[0].getSize(0); ++i) {
+    if (static_cast<std::size_t>(i) > people.size()) {
+      people.push_back({.person_id = i});
+    }
+    people[i].left_paw = to_points(data.handKeypoints[0], i);
+  }
+  for (int i = 0; i < data.handKeypoints[1].getSize(0); ++i) {
+    if (static_cast<std::size_t>(i) > people.size()) {
+      people.push_back({.person_id = i});
+    }
+    people[i].right_paw = to_points(data.handKeypoints[1], i);
+  }
+
+  save_people(people, filename);;
+}
 
 int main() {
   std::vector<Recording> recordings;
@@ -89,10 +177,10 @@ int main() {
   face_config.detector = op::Detector::Body;
   face_config.renderMode = op::RenderMode::None;
 
-  op::WrapperStructHand hand_config;
-  // hand_config.enable = true; // Enable after upgrading GPU.
-  hand_config.detector = op::Detector::BodyWithTracking;
-  hand_config.renderMode = op::RenderMode::None;
+  op::WrapperStructHand paw_config;
+  paw_config.enable = true; // Enable after upgrading GPU.
+  paw_config.detector = op::Detector::BodyWithTracking;
+  paw_config.renderMode = op::RenderMode::None;
 
   // TODO: Enable these features once out of "experimental."
   op::WrapperStructExtra extra_config;
@@ -106,7 +194,7 @@ int main() {
     op::Wrapper wrapper{op::ThreadManagerMode::Asynchronous};
     wrapper.configure(pose_config);
     wrapper.configure(face_config);
-    wrapper.configure(hand_config);
+    wrapper.configure(paw_config);
     wrapper.configure(extra_config);
     wrapper.start();
 
@@ -122,12 +210,8 @@ int main() {
       if (data) {
         ++tracked_count;
         std::filesystem::path data_file_path = image_path;
-        data_file_path.replace_extension(".csv");
-        std::ofstream data_out{data_file_path};
-        data_out << "Person,Part,Point,X,Y,Confidence\n";
-        dump(data_out, "Body", data->at(0)->poseKeypoints);
-        dump(data_out, "Face", data->at(0)->faceKeypoints);
-        data_out.flush();
+        data_file_path.replace_extension(".yml");
+        dump(data_file_path, *data->at(0));
       }
 
       if (++processed_count % 100 == 0) {

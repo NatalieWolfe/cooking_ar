@@ -16,20 +16,19 @@ double to_fps(std::size_t frame_count, const steady_clock::duration& duration) {
 }
 
 std::string to_hms(steady_clock::duration duration) {
-  steady_clock::duration chunk;
   std::stringstream stream;
 
   if (duration >= hours(1)) {
-    chunk = duration_cast<hours>(duration);
+    hours chunk = duration_cast<hours>(duration);
     stream << chunk.count() << 'h';
     duration -= chunk;
   }
   if (duration >= minutes(1)) {
-    chunk = duration_cast<minutes>(duration);
+    minutes chunk = duration_cast<minutes>(duration);
     stream << chunk.count() << 'm';
     duration -= chunk;
   }
-  chunk = duration_cast<seconds>(duration);
+  seconds chunk = duration_cast<seconds>(duration);
   duration -= chunk;
   double secs =
     chunk.count() + (duration_cast<milliseconds>(duration).count() / 1000.0);
