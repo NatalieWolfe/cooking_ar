@@ -6,6 +6,7 @@ cc_binary(
   deps = [
     ":cameras",
     ":files",
+    ":keys",
     "//third_party:opencv",
   ],
 )
@@ -34,6 +35,13 @@ cc_library(
   name = "files",
   hdrs = ["files.h"],
   srcs = ["files.cpp"],
+)
+
+cc_library(
+  name = "keys",
+  hdrs = ["keys.h"],
+  srcs = ["keys.cpp"],
+  deps = ["//third_party:opencv"],
 )
 
 cc_binary(
@@ -81,6 +89,7 @@ cc_binary(
   srcs = ["visualizer.cpp"],
   deps = [
     ":files",
+    ":keys",
     ":tracking",
     "//third_party:opencv",
   ],

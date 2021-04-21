@@ -1,3 +1,4 @@
+#include <chrono>
 #include <iostream>
 #include <opencv2/aruco.hpp>
 #include <opencv2/aruco/charuco.hpp>
@@ -10,22 +11,11 @@
 
 #include "src/cameras.h"
 #include "src/files.h"
+#include "src/keys.h"
+
+using namespace std::chrono_literals;
 
 constexpr std::size_t MIN_CALIBRATION_FRAMES = 5;
-
-enum class Key: int {
-  NONE = -1,
-
-  ENTER = 13,
-  ESC = 27,
-  SPACE = 32,
-  LEFT = 81,
-  DOWN = 82,
-  RIGHT = 83,
-  UP = 84,
-  X = 120,
-  Z = 122
-};
 
 cv::Ptr<cv::aruco::CharucoBoard> get_board() {
   static cv::Ptr<cv::aruco::CharucoBoard> board =
@@ -253,7 +243,7 @@ void run_camera_calibration(std::vector<CharucoCalibrator>& calibrators) {
   bool render_undistorted = false;
   std::size_t camera_idx = 0;
 
-  while (key = static_cast<Key>(cv::waitKey(50)), key != Key::ESC) {
+  while (key = wait_key(50ms), key != Key::ESC) {
     CharucoCalibrator* calibrator = &calibrators[camera_idx];
 
     switch (key) {

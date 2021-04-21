@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <filesystem>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -7,8 +8,10 @@
 #include <vector>
 
 #include "src/files.h"
+#include "src/keys.h"
 #include "src/tracking.h"
 
+using namespace std::chrono_literals;
 using std::filesystem::directory_iterator;
 
 void draw(cv::Mat& image, cv::Scalar color, Point point) {
@@ -63,16 +66,16 @@ int main() {
   );
 
   std::size_t i = 0;
-  int key = -1;
-  while (key = cv::waitKey(33), key != 27) {
-    if (key == 49) ++i; // 1
-    else if (key == 50) i += cam_count; // 2
-    else if (key == 51) i += 10 * cam_count; // 3
-    else if (key == 52) i += 100 * cam_count; // 4
-    else if (key == 113) --i; // q
-    else if (key == 119) i -= cam_count; // w
-    else if (key == 101) i -= 10 * cam_count; // e
-    else if (key == 114) i -= 100 * cam_count; // r
+  Key key;
+  while (key = wait_key(33ms), key != Key::ESC) {
+    if (key == Key::ONE) ++i;
+    else if (key == Key::TWO) i += cam_count;
+    else if (key == Key::THREE) i += 10 * cam_count;
+    else if (key == Key::FOUR) i += 100 * cam_count;
+    else if (key == Key::Q) --i;
+    else if (key == Key::W) i -= cam_count;
+    else if (key == Key::E) i -= 10 * cam_count;
+    else if (key == Key::R) i -= 100 * cam_count;
     i %= image_files.size();
 
     std::filesystem::path image_file = image_files[i];
