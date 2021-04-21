@@ -75,3 +75,13 @@ cc_binary(
   srcs = ["track.cpp"],
   deps = ["//third_party:opencv"],
 )
+
+cc_binary(
+  name = "visualizer",
+  srcs = ["visualizer.cpp"],
+  deps = [
+    ":files",
+    ":tracking",
+    "//third_party:opencv",
+  ],
+)
