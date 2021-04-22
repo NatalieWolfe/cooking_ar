@@ -7,6 +7,8 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/videoio.hpp>
+#include <sstream>
+#include <string>
 #include <vector>
 
 #include "src/cameras.h"
@@ -30,8 +32,8 @@ cv::Ptr<cv::aruco::CharucoBoard> get_board() {
 cv::VideoCapture open_camera(int camera_id) {
   cv::VideoCapture camera;
   camera.open(camera_id);
-  camera.set(cv::CAP_PROP_FRAME_WIDTH, 1920);
-  camera.set(cv::CAP_PROP_FRAME_HEIGHT, 1080);
+  camera.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+  camera.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
   return camera;
 }
 
@@ -44,6 +46,7 @@ public:
 
   const CameraParameters& parameters() const { return _parameters; }
   const CameraDevice& device() const { return _parameters.device; }
+  const std::string& debug_text() const { return _debug_text; }
   const cv::Mat& frame() const { return _display_frame; }
   const cv::Mat& last_corners() const { return _last_charuco_corners; }
   const std::vector<cv::Mat>& saved_corners() const {
@@ -61,8 +64,8 @@ public:
     std::cout << "Saving frame state " << _saved_charuco_ids.size();
 
     if (_saved_charuco_corners.size() >= MIN_CALIBRATION_FRAMES) {
-      double avg_error = _calibrate();
-      std::cout << "; calibrated with " << avg_error << " average error";
+      _calibrate();
+      std::cout << "; calibrated with " << _error_rate << " average error";
     }
     std::cout << '.' << std::endl;
   }
@@ -75,8 +78,8 @@ public:
     _saved_charuco_ids.pop_back();
 
     if (_saved_charuco_corners.size() >= MIN_CALIBRATION_FRAMES) {
-      double avg_error = _calibrate();
-      std::cout << "; calibrated with " << avg_error << " average error";
+      _calibrate();
+      std::cout << "; calibrated with " << _error_rate << " average error";
     }
     std::cout << '.' << std::endl;
   }
@@ -125,8 +128,8 @@ public:
   }
 
 private:
-  double _calibrate() {
-    return cv::aruco::calibrateCameraCharuco(
+  void _calibrate() {
+    _error_rate = cv::aruco::calibrateCameraCharuco(
       _saved_charuco_corners, _saved_charuco_ids, get_board(), _frame.size(),
       _parameters.matrix, _parameters.distortion,
       _parameters.rotation, _parameters.translation,
@@ -139,6 +142,9 @@ private:
   cv::Mat _detect_charuco() {
     cv::Mat display_image;
     _frame.copyTo(display_image);
+    _debug_text = _parameters.device.device_path.string() + '\n';
+    _debug_text += "RMS: " + std::to_string(_error_rate) + '\n';
+
     auto board = get_board();
     cv::Ptr<cv::aruco::DetectorParameters> params =
       cv::aruco::DetectorParameters::create();
@@ -173,17 +179,19 @@ private:
       cv::Scalar{255, 0, 0}
     );
 
-    if (calibrated() && _estimate_pose()) {
-      cv::aruco::drawAxis(
-        display_image,
-        _parameters.matrix,
-        _parameters.distortion,
-        _parameters.rotation,
-        _parameters.translation,
-        board->getSquareLength()
-      );
-    }
+    if (!calibrated()) return display_image;
 
+    if (!_estimate_pose()) return display_image;
+    cv::aruco::drawAxis(
+      display_image,
+      _parameters.matrix,
+      _parameters.distortion,
+      _parameters.rotation,
+      _parameters.translation,
+      board->getSquareLength()
+    );
+    _debug_text += "tvec: " + _dump(_parameters.translation) + '\n';
+    _debug_text += "rvec: " + _dump(_parameters.rotation) + '\n';
     return display_image;
   }
 
@@ -199,6 +207,12 @@ private:
     );
   }
 
+  std::string _dump(const cv::Mat& matrix) {
+    std::stringstream stream;
+    stream << matrix;
+    return stream.str();
+  }
+
   CameraParameters _parameters;
   cv::VideoCapture _camera;
   cv::Mat _frame;
@@ -207,6 +221,8 @@ private:
   cv::Mat _last_charuco_corners;
   std::vector<cv::Mat> _saved_charuco_ids;
   std::vector<cv::Mat> _saved_charuco_corners;
+  double _error_rate = 420.69;
+  std::string _debug_text;
 };
 
 std::vector<CharucoCalibrator> get_calibrators() {
@@ -232,6 +248,33 @@ void draw_corners(
       },
       4, // Point size,
       color,
+      1,
+      cv::LINE_AA
+    );
+  }
+}
+
+void put_text(cv::Mat& image, cv::Point origin, const std::string& text) {
+  std::stringstream stream{text};
+  std::string line;
+  for (; stream >> line; origin.y += 10) {
+    cv::putText(
+      image,
+      line,
+      origin,
+      cv::FONT_HERSHEY_PLAIN,
+      0.9,
+      {0, 0, 0},
+      2,
+      cv::LINE_AA
+    );
+    cv::putText(
+      image,
+      line,
+      origin,
+      cv::FONT_HERSHEY_PLAIN,
+      0.9,
+      {255, 255, 255},
       1,
       cv::LINE_AA
     );
@@ -307,6 +350,7 @@ void run_camera_calibration(std::vector<CharucoCalibrator>& calibrators) {
     for (int y = 0; y < mirror.size().height; y += grid_size) {
       cv::line(mirror, {0, y}, {mirror.size().width, y}, color);
     }
+    put_text(mirror, {10, 10}, calibrator->debug_text());
     cv::imshow("Calibrator", mirror);
 
     cv::Mat visualizer = cv::Mat::zeros(mirror.size(), mirror.type());
@@ -351,7 +395,10 @@ void run_camera_orientation(std::vector<CharucoCalibrator>& calibrators) {
     // Detect charuco board and calculate pose, then display.
     for (CharucoCalibrator& calibrator : calibrators) {
       calibrator.detect_board();
-      cv::imshow(calibrator.device().device_path, calibrator.frame());
+      cv::Mat image;
+      calibrator.frame().copyTo(image);
+      put_text(image, {10, 10}, calibrator.debug_text());
+      cv::imshow(calibrator.device().device_path, image);
     }
   }
 }
