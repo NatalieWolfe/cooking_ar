@@ -69,7 +69,7 @@ void write(cv::FileStorage& file, const Person3d& person) {
 }
 
 Point read_point(const cv::FileNode& file) {
-  return Point {
+  return Point{
     .point_id = static_cast<int>(file["point_id"]),
     .x = static_cast<double>(file["x"]),
     .y = static_cast<double>(file["y"]),
@@ -96,6 +96,40 @@ Person read_person(const cv::FileNode& file) {
 std::vector<Person> read_people(const cv::FileNode& file) {
   std::vector<Person> people;
   for (const cv::FileNode& person : file) people.push_back(read_person(person));
+  return people;
+}
+
+Point3d read_point_3d(const cv::FileNode& file) {
+  return Point3d{
+    .point_id = static_cast<int>(file["point_id"]),
+    .x = static_cast<double>(file["x"]),
+    .y = static_cast<double>(file["y"]),
+    .z = static_cast<double>(file["z"]),
+    .confidence = static_cast<double>(file["confidence"]),
+  };
+}
+
+std::vector<Point3d> read_points_3d(const cv::FileNode& file) {
+  std::vector<Point3d> points;
+  for (const cv::FileNode& point : file) points.push_back(read_point_3d(point));
+  return points;
+}
+
+Person3d read_person_3d(const cv::FileNode& file) {
+  return Person3d{
+    .person_id = static_cast<int>(file["person_id"]),
+    .body{read_points_3d(file["body"])},
+    .face{read_points_3d(file["face"])},
+    .right_paw{read_points_3d(file["right_paw"])},
+    .left_paw{read_points_3d(file["left_paw"])}
+  };
+}
+
+std::vector<Person3d> read_people_3d(const cv::FileNode& file) {
+  std::vector<Person3d> people;
+  for (const cv::FileNode& person : file) {
+    people.push_back(read_person_3d(person));
+  }
   return people;
 }
 
@@ -143,4 +177,12 @@ std::vector<Person> load_people(const std::filesystem::path& filename) {
     cv::FileStorage::READ | cv::FileStorage::FORMAT_YAML
   };
   return read_people(file["people"]);
+}
+
+std::vector<Person3d> load_people_3d(const std::filesystem::path& filename) {
+  cv::FileStorage file{
+    filename.string(),
+    cv::FileStorage::READ | cv::FileStorage::FORMAT_YAML
+  };
+  return read_people_3d(file["people"]);
 }

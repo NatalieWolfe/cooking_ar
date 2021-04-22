@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <opencv2/core.hpp>
 #include <vector>
 
 struct Point {
@@ -45,3 +46,4 @@ void save_people_3d(
 );
 
 std::vector<Person> load_people(const std::filesystem::path& filename);
+std::vector<Person3d> load_people_3d(const std::filesystem::path& filename);
