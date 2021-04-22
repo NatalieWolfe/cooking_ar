@@ -17,6 +17,7 @@ enum class Key: int {
   RIGHT = 83,
   UP = 84,
   E = 101,
+  M = 109,
   Q = 113,
   R = 114,
   W = 119,

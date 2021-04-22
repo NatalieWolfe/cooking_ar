@@ -38,6 +38,12 @@ const fs::path& get_calibration_directory_path() {
   return calibration_root;
 }
 
+const fs::path& get_animation_directory_path() {
+  static const fs::path animation_root =
+    make_path(get_output_root_path() / "animation");
+  return animation_root;
+}
+
 fs::path get_recordings_path(int camera_id) {
   return make_path(get_recordings_directory_path() / std::to_string(camera_id));
 }

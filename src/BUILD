@@ -51,6 +51,7 @@ cc_binary(
     ":cameras",
     ":files",
     ":tracking",
+    "//third_party:opencv",
   ],
 )
 
@@ -88,6 +89,7 @@ cc_binary(
   name = "visualizer",
   srcs = ["visualizer.cpp"],
   deps = [
+    ":cameras",
     ":files",
     ":keys",
     ":tracking",
