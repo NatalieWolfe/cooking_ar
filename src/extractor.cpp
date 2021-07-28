@@ -21,7 +21,6 @@ struct Recording {
   std::filesystem::path path;
   std::vector<std::filesystem::path> image_files;
   CameraParameters camera;
-  Rectifier rectifier;
 };
 
 std::vector<Point> to_points(const op::Array<float>& keypoints, int person_id) {
@@ -81,11 +80,6 @@ int main() {
       }
     }
 
-    recording.rectifier = Rectifier{
-      recording.camera,
-      cv::imread(recording.image_files.front().string()).size()
-    };
-
     image_count += recording.image_files.size();
     std::sort(
       recording.image_files.begin(),
@@ -139,8 +133,7 @@ int main() {
       op::Matrix image;
       {
         cv::Mat raw_image = cv::imread(image_path.string());
-        cv::Mat cv_image = recording.rectifier(raw_image);
-        image = OP_CV2OPCONSTMAT(cv_image);
+        image = OP_CV2OPCONSTMAT(raw_image);
       }
 
       auto data = wrapper.emplaceAndPop(image);

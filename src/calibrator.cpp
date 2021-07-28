@@ -23,7 +23,7 @@ cv::Ptr<cv::aruco::CharucoBoard> get_board() {
   static cv::Ptr<cv::aruco::CharucoBoard> board =
     cv::aruco::CharucoBoard::create(
       5, 7,
-      0.03f, 0.015f,
+      0.0303f, 0.01515f,
       cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250)
     );
   return board;
@@ -32,8 +32,8 @@ cv::Ptr<cv::aruco::CharucoBoard> get_board() {
 cv::VideoCapture open_camera(int camera_id) {
   cv::VideoCapture camera;
   camera.open(camera_id);
-  camera.set(cv::CAP_PROP_FRAME_WIDTH, 640);
-  camera.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+  camera.set(cv::CAP_PROP_FRAME_WIDTH, 1920);
+  camera.set(cv::CAP_PROP_FRAME_HEIGHT, 1080);
   return camera;
 }
 

@@ -11,6 +11,8 @@ struct CameraDevice {
   std::string name;
 };
 
+// TODO: Add camera resolution to calibration name and parameters.
+// TODO: Add coordinate space id for rotation and translation.
 struct CameraParameters {
   CameraDevice device;
   cv::Mat matrix;

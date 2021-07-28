@@ -69,22 +69,16 @@ float calc_magnitude(float x, float y, float z) {
  */
 cv::Mat to_ray(const CameraParameters& params, const Point& point) {
   // TODO: Switch to undistorted matrix.
-  cv::Mat matrix = cv::getOptimalNewCameraMatrix(
-    params.matrix,
-    params.distortion,
-    {640, 480},
-    0.0,
-    {640, 480}
-  );
-  float f_x = static_cast<float>(matrix.at<double>(0, 0));
-  float c_x = static_cast<float>(matrix.at<double>(0, 2));
-  float f_y = static_cast<float>(matrix.at<double>(1, 1));
-  float c_y = static_cast<float>(matrix.at<double>(1, 2));
+  cv::Mat in_points = cv::Mat::zeros(2, 1, CV_32F);
+  std::vector<cv::Point2f> out_points;
+  in_points.at<float>(0, 0) = point.x;
+  in_points.at<float>(1, 0) = point.y;
+  cv::undistortPoints(in_points, out_points, params.matrix, params.distortion);
 
   // Ray from camera origin pointing at pixel on image plane.
-  float p_x = (point.x - c_x) / f_x;
-  float p_y = (point.y - c_y) / f_y;
-  float p_z = 1;
+  float p_x = out_points[0].x;
+  float p_y = out_points[0].y;
+  float p_z = 1.0f;
   float magnitude = calc_magnitude(p_x, p_y, p_z);
   p_x /= magnitude;
   p_y /= magnitude;
@@ -158,8 +152,8 @@ Point3d project_point(
     ((b_dot_d * b_dot_d) - 1)
   );
 
-  cv::Mat midpoint = (cam_1 + cam_2 + (t * ray_1) + (s * ray_2)) / 2;
-  return Point3d{
+  cv::Mat midpoint = (cam_1 + cam_2 + (t * ray_1) + (s * ray_2)) / 2.235f;
+  return Point3d{>
     .point_id = point_1.point_id,
     .x = midpoint.at<float>(0, 0),
     .y = midpoint.at<float>(1, 0),
@@ -189,6 +183,19 @@ void save_obj(const cv::Mat& t, const Person3d& person, std::filesystem::path fi
   for (const Point3d& point : person.body) {
     out << "v " << point.x << ' ' << point.y << ' ' << point.z << '\n';
   }
+  // out <<
+  //   "l 1 2\n"
+  //   "l 10 3 2\n"
+  //   "l 19 17 2 18 20\n"
+  //   "l 6 5 4 3 7 8 9\n"
+  //   "l 11 10 14 15\n";
+
+  out <<
+    "l 9 2 1\n"
+    "l 18 16 1 17 19\n"
+    "l 5 4 3 2 6 7 8\n"
+    "l 10 9 13 14\n";
+
   out << std::flush;
   out.close();
 }
@@ -198,6 +205,7 @@ int main() {
     std::filesystem::directory_iterator{get_recordings_directory_path()};
   std::vector<std::filesystem::path> camera_directories;
   for (const auto& cam_dir : recordings_iterator) {
+    std::cout << cam_dir.path() << std::endl;
     camera_directories.push_back(cam_dir.path());
   }
   // TODO: Add support for more than 2 cameras.

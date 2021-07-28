@@ -43,7 +43,7 @@ void draw(
   std::vector<cv::Point2d> points2d;
   for (const Point3d& point : points) {
     // std::cout << point.x << ',' << point.y << ',' << point.z << std::endl;
-    points3d.emplace_back(point.x * 10, point.y * 10, point.z * 10);
+    points3d.emplace_back(point.x, point.y, point.z);
   }
   cv::projectPoints(
     points3d,
@@ -65,9 +65,9 @@ void draw(
   const Person3d& person
 ) {
   draw(image, {0, 0, 0}, camera, person.body);
-  draw(image, {0, 64, 0}, camera, person.face);
-  draw(image, {0, 128, 0}, camera, person.right_paw);
-  draw(image, {0, 196, 0}, camera, person.left_paw);
+  // draw(image, {0, 64, 0}, camera, person.face);
+  // draw(image, {0, 128, 0}, camera, person.right_paw);
+  // draw(image, {0, 196, 0}, camera, person.left_paw);
 }
 
 void draw(cv::Mat& image, const Person& person) {
@@ -79,13 +79,13 @@ void draw(cv::Mat& image, const Person& person) {
   // cv::Scalar color{0, 0, static_cast<double>(person.person_id * 30 % 256)};
   cv::Scalar color{0, 0, 0};
   for (const Point& point : person.body) draw(image, color + body, point);
-  for (const Point& point : person.face) draw(image, color + face, point);
-  for (const Point& point : person.right_paw) {
-    draw(image, color + right_paw, point);
-  }
-  for (const Point& point : person.left_paw) {
-    draw(image, color + left_paw, point);
-  }
+  // for (const Point& point : person.face) draw(image, color + face, point);
+  // for (const Point& point : person.right_paw) {
+  //   draw(image, color + right_paw, point);
+  // }
+  // for (const Point& point : person.left_paw) {
+  //   draw(image, color + left_paw, point);
+  // }
 }
 
 int main() {

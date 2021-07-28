@@ -31,8 +31,8 @@ public:
     _save_path{get_recordings_path(camera_id)}
   {
     _camera_input.open(_camera_id);
-    _camera_input.set(cv::CAP_PROP_FRAME_WIDTH, 640);
-    _camera_input.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+    _camera_input.set(cv::CAP_PROP_FRAME_WIDTH, 1920);
+    _camera_input.set(cv::CAP_PROP_FRAME_HEIGHT, 1080);
     _thread = std::thread{std::bind(&Camera::_thread_loop, this)};
   }
 
@@ -116,8 +116,8 @@ int main(int argc, char* argv[]) {
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
   auto start = steady_clock::now();
-  auto frame_duration = std::chrono::nanoseconds(33333333); // 30 fps
-  for (; frame_counter < 1000; ++frame_counter) {
+  auto frame_duration = std::chrono::nanoseconds(41'666'666); // 24 fps
+  for (; frame_counter < 48; ++frame_counter) {
     auto next_shot = start + (frame_duration * (frame_counter + 1));
     for (std::unique_ptr<Camera>& camera : cameras) {
       camera->capture();
