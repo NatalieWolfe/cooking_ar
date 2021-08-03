@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 import "ingest/proto/camera.proto";
-import "ingest/proto/pose.proto";
+import "ingest/proto/extractor.proto";
 
 message SessionStartEvent {
   string session_id = 1;
@@ -10,6 +10,5 @@ message SessionStartEvent {
 
 message FrameExtractionCompleteEvent {
   string session_id = 1;
-  Camera camera = 2;
-  repeated Pose2d poses = 3;
+  ExtractedPose2d extraction = 2;
 }

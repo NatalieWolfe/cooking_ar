@@ -5,11 +5,61 @@ message Point2d {
   double y = 2;
 }
 
+message Point3d {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
 message Pose2d {
   message Point {
     int32 point_id = 1;
     Point2d coordinates = 2;
     double confidence = 3;
+  }
+  message Core {
+    Point nose = 1;
+    Point neck = 2;
+    Point right_shoulder = 3;
+    Point right_elbow = 4;
+    Point right_wrist = 5;
+    Point left_shoulder = 6;
+    Point left_elbow = 7;
+    Point left_wrist = 8;
+    Point middle_hip = 9;
+    Point right_hip = 10;
+    Point right_knee = 11;
+    Point right_ankle = 12;
+    Point left_hip = 13;
+    Point left_knee = 14;
+    Point left_ankle = 15;
+    Point right_eye = 16;
+    Point left_eye = 17;
+    Point right_ear = 18;
+    Point left_ear = 19;
+    Point left_big_toe = 20;
+    Point left_small_toe = 21;
+    Point left_heel = 22;
+    Point right_big_toe = 23;
+    Point right_small_toe = 24;
+    Point right_heel = 25;
+  }
+  message Face {}
+  message Paw {}
+
+  string pose_id = 1;
+  repeated Core core = 2;
+  repeated Face face = 3;
+  repeated Paw right_paw = 4;
+  repeated Paw left_paw = 5;
+}
+
+message Pose3d {
+  message Point {
+    int32 point_id = 1;
+    Point3d coordinates = 2;
+    double confidence = 3;
+    repeated string projection_camera_ids = 4;
   }
   message Core {
     Point nose = 1;

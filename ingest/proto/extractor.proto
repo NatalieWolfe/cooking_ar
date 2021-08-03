@@ -1,10 +1,16 @@
 syntax = "proto3";
 
 import "ingest/proto/camera.proto";
+import "ingest/proto/pose.proto";
 import "ingest/proto/video.proto";
 
 message ExtractFrameEvent {
   string session_id = 1;
   VideoFrame frame = 2;
   Camera camera = 3;
+}
+
+message ExtractedPose2d {
+  Camera camera = 1;
+  repeated Pose2d poses = 2;
 }

@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+import "ingest/proto/camera.proto";
+import "ingest/proto/extractor.proto";
+import "ingest/proto/pose.proto";
+import "ingest/proto/video.proto";
+
+message ProjectFrameEvent {
+  string session_id = 1;
+  VideoFrame frame = 2;
+  repeated ExtractedPose2d extractions = 3;
+}
+
+message ProjectedFramePoses {
+  repeated Camera cameras = 1;
+  repeated Pose3d poses = 2;
+}
