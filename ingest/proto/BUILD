@@ -27,6 +27,20 @@ cc_proto_library(
 )
 
 proto_library(
+  name = "frame_coordinator_proto",
+  srcs = ["frame_coordinator.proto"],
+  deps = [
+    ":camera_proto",
+    ":pose_proto",
+  ],
+)
+
+cc_proto_library(
+  name = "frame_coordinator_proto_cc",
+  deps = [":frame_coordinator_proto"],
+)
+
+proto_library(
   name = "pose_proto",
   srcs = ["pose.proto"],
 )

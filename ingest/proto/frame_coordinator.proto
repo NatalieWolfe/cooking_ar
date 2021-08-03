@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+import "ingest/proto/camera.proto";
+import "ingest/proto/pose.proto";
+
+message SessionStartEvent {
+  string session_id = 1;
+  repeated string camera_ids = 2;
+}
+
+message FrameExtractionCompleteEvent {
+  string session_id = 1;
+  Camera camera = 2;
+  repeated Pose2d poses = 3;
+}
