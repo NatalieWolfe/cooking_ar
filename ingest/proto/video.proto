@@ -11,7 +11,8 @@ message Video {
 }
 
 message StartVideoEvent {
-  Video video = 1;
+  string session_id = 1;
+  Video video = 2;
 }
 
 message VideoFrame {
