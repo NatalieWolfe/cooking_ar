@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+import "ingest/proto/camera.proto";
+import "ingest/proto/video.proto";
+
+message ExtractFrameEvent {
+  VideoFrame frame = 1;
+  Camera camera = 2;
+}

@@ -16,6 +16,27 @@ cc_proto_library(
 )
 
 proto_library(
+  name = "extractor_proto",
+  srcs = ["extractor.proto"],
+  deps = [":camera_proto"],
+)
+
+cc_proto_library(
+  name = "extractor_proto_cc",
+  deps = [":extractor_proto"],
+)
+
+proto_library(
+  name = "pose_proto",
+  srcs = ["pose.proto"],
+)
+
+cc_proto_library(
+  name = "pose_proto_cc",
+  deps = [":pose_proto"],
+)
+
+proto_library(
   name = "session_proto",
   srcs = ["session.proto"],
   deps = [":camera_proto"],

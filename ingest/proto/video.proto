@@ -17,7 +17,6 @@ message StartVideoEvent {
 message VideoFrame {
   string video_id = 1;
   string frame_id = 2;
-  Camera camera = 3;
-  google.protobuf.Duration sync_offset = 4;
-  string frame_url = 5;
+  google.protobuf.Duration sync_offset = 3;
+  string frame_url = 4;
 }
