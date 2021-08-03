@@ -25,3 +25,14 @@ cc_proto_library(
   name = "session_proto_cc",
   deps = [":session_proto"],
 )
+
+proto_library(
+  name = "video_proto",
+  srcs = ["video.proto"],
+  deps = [":camera_proto"],
+)
+
+cc_proto_library(
+  name = "video_proto_cc",
+  deps = [":video_proto"],
+)

@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+import "google/protobuf/duration.proto";
+import "ingest/proto/camera.proto";
+
+message Video {
+  string video_id = 1;
+  Camera camera = 2;
+  string video_url = 3;
+  int32 frames_per_second = 4;
+}
+
+message StartVideoEvent {
+  Video video = 1;
+}
+
+message VideoFrame {
+  string video_id = 1;
+  string frame_id = 2;
+  Camera camera = 3;
+  google.protobuf.Duration sync_offset = 4;
+  string frame_url = 5;
+}
