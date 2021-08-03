@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+import "ingest/proto/extractor.proto";
+
+message ProjectFrameEvent {
+  string session_id = 1;
+  repeated ExtractedPose2d extractions = 2;
+}

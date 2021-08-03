@@ -31,7 +31,7 @@ proto_library(
   srcs = ["frame_coordinator.proto"],
   deps = [
     ":camera_proto",
-    ":pose_proto",
+    ":extractor_proto",
   ],
 )
 
@@ -48,6 +48,17 @@ proto_library(
 cc_proto_library(
   name = "pose_proto_cc",
   deps = [":pose_proto"],
+)
+
+proto_library(
+  name = "projector_proto",
+  srcs = ["projector.proto"],
+  deps = [":extractor_proto"],
+)
+
+cc_proto_library(
+  name = "projector_proto_cc",
+  deps = [":projector_proto"],
 )
 
 proto_library(
