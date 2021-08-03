@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+message Matrix3 {
+  message Row {
+    double c1 = 1;
+    double c2 = 2;
+    double c3 = 3;
+  }
+
+  Row r1 = 1;
+  Row r2 = 2;
+  Row r3 = 3;
+}
+
+message Matrix4 {
+  message Row {
+    double c1 = 1;
+    double c2 = 2;
+    double c3 = 3;
+    double c4 = 4;
+  }
+
+  Row r1 = 1;
+  Row r2 = 2;
+  Row r3 = 3;
+  Row r4 = 4;
+}
+
+message Camera {
+  string camera_id = 1;
+  Matrix3 intrinsics = 2;
+  Matrix4 extrinsics = 3;
+  repeated double distortion_coefficients = 4;
+}

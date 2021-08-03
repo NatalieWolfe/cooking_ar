@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "ingest/proto/camera.proto";
+
+message Recording {
+  Camera camera = 1;
+  string video_url = 2;
+  int32 frames_per_second = 3;
+}
+
+message Session {
+  string session_id = 1;
+  repeated Recording recordings = 2;
+}

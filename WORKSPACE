@@ -40,3 +40,26 @@ http_archive(
     'visibility = ["@//third_party/opencv:__subpackages__"])',
   url = "https://github.com/opencv/opencv_contrib/archive/refs/tags/4.5.2.zip",
 )
+
+http_archive(
+    name = "rules_proto",
+    strip_prefix = "rules_proto-af6481970a34554c6942d993e194a9aed7987780",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_proto/archive/af6481970a34554c6942d993e194a9aed7987780.tar.gz",
+        "https://github.com/bazelbuild/rules_proto/archive/af6481970a34554c6942d993e194a9aed7987780.tar.gz",
+    ],
+)
+load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
+rules_proto_dependencies()
+rules_proto_toolchains()
+
+http_archive(
+    name = "rules_cc",
+    strip_prefix = "rules_cc-daf6ace7cfeacd6a83e9ff2ed659f416537b6c74",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_cc/archive/daf6ace7cfeacd6a83e9ff2ed659f416537b6c74.tar.gz",
+        "https://github.com/bazelbuild/rules_cc/archive/daf6ace7cfeacd6a83e9ff2ed659f416537b6c74.tar.gz",
+    ],
+)
+load("@rules_cc//cc:repositories.bzl", "rules_cc_dependencies")
+rules_cc_dependencies()
