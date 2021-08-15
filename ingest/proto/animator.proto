@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+import "ingest/proto/projector.proto";
+import "ingest/proto/video.proto";
+
+message AddAnimationFrameEvent {
+  string session_id = 1;
+  VideoFrame frame = 2;
+  ProjectedFramePoses projection = 3;
+}
