@@ -22,23 +22,13 @@ git_repository(
 )
 
 http_archive(
-  name = "opencv",
-  strip_prefix = "opencv-4.5.2",
-  sha256 = "be976b9ef14f1deaa282fb6e30d75aa8016a2d5c1f08e85795c235148940d753",
+  name = "amqp-4.3.14",
+  strip_prefix = "AMQP-CPP-4.3.14",
+  sha256 = "b8e7fdb98c83d0f21b3c1f2b293aff3f6abd33f20e81b55cc8812ce62079942c",
   build_file_content =
-    'filegroup(name = "all", srcs = glob(["**"]), ' +
-    'visibility = ["@//third_party/opencv:__subpackages__"])',
-  url = "https://github.com/opencv/opencv/archive/refs/tags/4.5.2.zip",
-)
-
-http_archive(
-  name = "opencv_contrib",
-  strip_prefix = "opencv_contrib-4.5.2",
-  sha256 = "8008ac4c623f90f8e67b2d5c58c465616d3317018beca38bd4e39b912fb6e4ae",
-  build_file_content =
-    'filegroup(name = "modules", srcs = glob(["modules/**"]), ' +
-    'visibility = ["@//third_party/opencv:__subpackages__"])',
-  url = "https://github.com/opencv/opencv_contrib/archive/refs/tags/4.5.2.zip",
+    'filegroup(name = "srcs", srcs = glob(["**"]), ' +
+    'visibility = ["@//third_party:__subpackages__"])',
+  url = "https://github.com/CopernicaMarketingSoftware/AMQP-CPP/archive/refs/tags/v4.3.14.zip",
 )
 
 http_archive(
