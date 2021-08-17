@@ -17,31 +17,17 @@ rules_foreign_cc_dependencies()
 
 git_repository(
   name = "gtest",
-  branch = "main",
+  branch = "master",
   remote = "https://github.com/google/googletest.git",
 )
 
 http_archive(
-  name = "amqp-4.3.14",
-  strip_prefix = "AMQP-CPP-4.3.14",
-  sha256 = "b8e7fdb98c83d0f21b3c1f2b293aff3f6abd33f20e81b55cc8812ce62079942c",
-  build_file_content =
-    'filegroup(name = "srcs", srcs = glob(["**"]), ' +
-    'visibility = ["@//third_party:__subpackages__"])',
-  url = "https://github.com/CopernicaMarketingSoftware/AMQP-CPP/archive/refs/tags/v4.3.14.zip",
+    name = "com_google_protobuf",
+    strip_prefix = "protobuf-master",
+    urls = ["https://github.com/protocolbuffers/protobuf/archive/master.zip"],
 )
-
-http_archive(
-    name = "rules_proto",
-    strip_prefix = "rules_proto-af6481970a34554c6942d993e194a9aed7987780",
-    sha256 = "bc12122a5ae4b517fa423ea03a8d82ea6352d5127ea48cb54bc324e8ab78493c",
-    urls = [
-        "https://github.com/bazelbuild/rules_proto/archive/af6481970a34554c6942d993e194a9aed7987780.tar.gz",
-    ],
-)
-load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
-rules_proto_dependencies()
-rules_proto_toolchains()
+load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")
+protobuf_deps()
 
 http_archive(
     name = "rules_cc",

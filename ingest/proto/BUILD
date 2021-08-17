@@ -94,7 +94,10 @@ cc_proto_library(
 proto_library(
   name = "video_proto",
   srcs = ["video.proto"],
-  deps = [":camera_proto"],
+  deps = [
+    ":camera_proto",
+    "@com_google_protobuf//:duration_proto",
+  ],
 )
 
 cc_proto_library(

@@ -16,10 +16,3 @@ cc_library(
   visibility = ["//visibility:public"],
   linkopts = ["-lopenpose"],
 )
-
-cmake(
-  name = "amqp",
-  lib_source = "@amqp-4.3.14//:srcs",
-  out_include_dir = "include",
-  out_static_libs = ["libamqpcpp.a"],
-)
