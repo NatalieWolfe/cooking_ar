@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+package ingest;
+
 import "ingest/proto/camera.proto";
 
 message Recording {

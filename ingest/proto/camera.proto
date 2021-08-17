@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+package ingest;
+
 message Matrix3 {
   message Row {
     double c1 = 1;
