@@ -14,6 +14,7 @@ message ProjectFrameEvent {
 }
 
 message ProjectedFramePoses {
-  repeated Camera cameras = 1;
-  repeated Pose3d poses = 2;
+  string session_id = 1;
+  repeated Camera cameras = 2;
+  repeated Pose3d poses = 3;
 }
