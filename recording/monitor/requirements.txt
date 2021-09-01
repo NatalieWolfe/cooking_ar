@@ -1,1 +1,2 @@
 Flask>=2
+jinja2>=3

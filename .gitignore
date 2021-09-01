@@ -33,3 +33,6 @@
 
 # Bazel directories
 bazel-*
+
+# Python files
+__pycache__
