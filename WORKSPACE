@@ -15,6 +15,7 @@ load(
 )
 rules_foreign_cc_dependencies()
 
+# C++ packages
 git_repository(
   name = "gtest",
   branch = "main",
@@ -39,4 +40,16 @@ http_archive(
     'filegroup(name = "modules", srcs = glob(["modules/**"]), ' +
     'visibility = ["@//third_party/opencv:__subpackages__"])',
   url = "https://github.com/opencv/opencv_contrib/archive/refs/tags/4.5.2.zip",
+)
+
+# Python packages
+git_repository(
+  name = "rules_python",
+  branch = "main",
+  remote = "https://github.com/bazelbuild/rules_python.git",
+)
+load("@rules_python//python:pip.bzl", "pip_install")
+pip_install(
+  name = "pip_monitor",
+  requirements = "//recording/monitor:requirements.txt"
 )
