@@ -53,3 +53,7 @@ pip_install(
   name = "pip_monitor",
   requirements = "//recording/monitor:requirements.txt"
 )
+pip_install(
+  name = "pip_camera",
+  requirements = "//recording/camera:requirements.txt"
+)
