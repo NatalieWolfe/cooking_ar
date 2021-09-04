@@ -4,4 +4,8 @@ load("@pip_monitor//:requirements.bzl", "requirement")
 py_binary(
   name = "camera",
   srcs = ["camera.py"],
+  deps = [
+    requirement("Flask"),
+    requirement("picamera"),
+  ],
 )
