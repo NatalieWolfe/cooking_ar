@@ -21,7 +21,7 @@ int open_socket(std::string_view stream_host) {
   ::addrinfo hints{.ai_family = AF_UNSPEC, .ai_socktype = SOCK_STREAM};
 
   std::string host{stream_host};
-  int err = ::getaddrinfo(host.c_str(), "http", &hints, &addresses);
+  int err = ::getaddrinfo(host.c_str(), "5000", &hints, &addresses);
   if (err) throw std::runtime_error{"Failed to get address info."};
 
   ::addrinfo* mvr = addresses;
@@ -82,7 +82,8 @@ std::string start_stream(int socket) {
       ::close(socket);
       throw std::runtime_error{"No frame boundary found in Content-Type."};
     }
-    boundary = line.substr(prefix_pos + boundary_prefix.size());
+    std::size_t boundary_start = prefix_pos + boundary_prefix.size();
+    boundary = line.substr(boundary_start, line.size() - boundary_start - 2);
   }
 
   if (boundary.empty() || bytes_received <= 0) {
@@ -97,7 +98,6 @@ std::string start_stream(int socket) {
 CameraStream CameraStream::connect(std::string_view stream_host) {
   int socket = open_socket(stream_host);
   std::string frame_boundary = start_stream(socket);
-
   return CameraStream{socket, std::move(frame_boundary)};
 }
 
@@ -121,20 +121,29 @@ CameraStream::~CameraStream() {
 
 void CameraStream::read_frame(std::ostream& out) {
   // Peak at the headers and find the header end position.
-  // TODO(alaina): Handle frame boundaries straddling buffer boundaries.
   char buffer[1024];
-  int bytes_received =
-    ::recv(_socket, (void*)buffer, sizeof(buffer), MSG_PEEK);
+  int bytes_received = 0;
+  std::size_t header_end_pos;
+  std::string_view buffer_view;
+  do {
+    bytes_received = ::recv(_socket, (void*)buffer, sizeof(buffer), MSG_PEEK);
+    if (bytes_received <= 0) break; // Error receiving!
+    buffer_view =
+      std::string_view{buffer, static_cast<std::size_t>(bytes_received)};
+    header_end_pos = buffer_view.find("\r\n\r\n");
+  } while (
+    header_end_pos == std::string_view::npos &&
+    bytes_received < static_cast<int>(sizeof(buffer))
+  );
+
   if (bytes_received <= 0) {
-    throw std::runtime_error{"Failed to receive data from streaming server."};
+    throw std::runtime_error{"Failed to read headers from server."};
   }
-  std::string_view buffer_view{buffer, static_cast<std::size_t>(bytes_received)};
   if (!buffer_view.starts_with(_frame_boundary)) {
     throw std::runtime_error{
       "Socket stream in invalid state, expected frame boundary."
     };
   }
-  std::size_t header_end_pos = buffer_view.find("\r\n\r\n");
   if (header_end_pos == std::string_view::npos) {
     throw std::runtime_error{"Headers did not fit in initial buffer."};
   }
@@ -144,10 +153,10 @@ void CameraStream::read_frame(std::ostream& out) {
   );
 
   // Parse the content length out of the headers.
-  static const std::regex content_length_regex{"Content-Length: (\\d+)"};
+  static const std::regex content_length_regex{"Content-Length:\\s+(\\d+)"};
   std::cmatch match;
   if (
-    !std::regex_match(
+    !std::regex_search(
       header_view.begin(),
       header_view.end(),
       match,
@@ -162,7 +171,7 @@ void CameraStream::read_frame(std::ostream& out) {
 
   // "Seek" to after the header.
   bytes_received =
-    ::recv(_socket, (void*)buffer, header_view.size(), /*flags=*/0);
+    ::recv(_socket, (void*)buffer, header_end_pos + 4, /*flags=*/0);
   if (bytes_received <= 0) {
     throw std::runtime_error{"Failed to seek to end of headers."};
   }

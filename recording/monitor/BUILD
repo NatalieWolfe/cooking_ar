@@ -12,3 +12,12 @@ cc_library(
   hdrs = ["frame_saver.h"],
   deps = [":camera_stream"],
 )
+
+cc_binary(
+  name = "monitor",
+  srcs = ["monitor.cpp"],
+  deps = [
+    ":camera_stream",
+    ":frame_saver",
+  ],
+)
