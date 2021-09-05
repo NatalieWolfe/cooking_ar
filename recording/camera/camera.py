@@ -15,7 +15,7 @@ camera = PiCamera(
 class StreamingBuffer():
   def __init__(self, camera):
     self.camera = camera
-    self.frames = [None for x in range(60)]
+    self.frames = [None for x in range(120)]
     self.write_frame = 0
     self.read_frame = 0
     self.buffer = io.BytesIO()
