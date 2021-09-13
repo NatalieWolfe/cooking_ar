@@ -1,6 +1,17 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
 cc_library(
+  name = "camera_controller",
+  srcs = ["camera_controller.cpp"],
+  hdrs = ["camera_controller.h"],
+  deps = [
+    ":camera_stream",
+    ":frame_saver",
+    "//third_party:opencv",
+  ],
+)
+
+cc_library(
   name = "camera_stream",
   srcs = ["camera_stream.cpp"],
   hdrs = ["camera_stream.h"],
