@@ -18,6 +18,13 @@ cc_library(
 )
 
 cc_library(
+  name = "charuco",
+  srcs = ["charuco.cpp"],
+  hdrs = ["charuco.h"],
+  deps = ["//third_party:opencv"],
+)
+
+cc_library(
   name = "frame_saver",
   srcs = ["frame_saver.cpp"],
   hdrs = ["frame_saver.h"],
