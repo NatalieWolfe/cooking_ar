@@ -1,4 +1,5 @@
 import io
+import time
 
 from flask import Flask, Response
 from picamera import PiCamera
@@ -15,7 +16,7 @@ camera = PiCamera(
 class StreamingBuffer():
   def __init__(self, camera):
     self.camera = camera
-    self.frames = [None for x in range(120)]
+    self.frames = [None for x in range(60)]
     self.write_frame = 0
     self.read_frame = 0
     self.buffer = io.BytesIO()
@@ -47,17 +48,18 @@ def frame_generator(boundary, camera):
   format = (
     b'--%s\r\n' +
     b'Content-Type: image/jpeg\r\n' +
-    b'Content-Length: %d\r\n\r\n' +
-    b'%s\r\n'
+    b'Content-Length: %d\r\n\r\n'
   )
 
   with StreamingBuffer(camera) as buffer:
     while True:
       frame = buffer.frame()
-      if (frame):
-        yield format % (bytes(boundary, 'ascii'), len(frame), frame)
+      if frame:
+        yield format % (bytes(boundary, 'ascii'), len(frame))
+        yield frame
+        yield b'\r\n'
       else:
-        yield ''
+        time.sleep(1.0 / 100.0)
 
 
 @app.route('/stream.mjpg')
