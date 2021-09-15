@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
 #include <mutex>
 #include <opencv2/core.hpp>
 #include <string_view>
@@ -24,10 +25,18 @@ public:
   // @return
   //  A new camera controller that is actively downloading frames from the
   //  remote camera.
-  static CameraController create(
+  static std::unique_ptr<CameraController> create(
     std::string_view camera_host,
     const std::filesystem::path& base_directory
   );
+
+  ~CameraController();
+
+  CameraController(CameraController&& other) = delete;
+  CameraController& operator=(CameraController&& other) = delete;
+
+  CameraController(const CameraController&) = delete;
+  CameraController& operator=(const CameraController&) = delete;
 
   // Returns true if downloaded frames are being persisted on disk.
   bool recording() const { return _record; }
@@ -62,6 +71,7 @@ private:
   CameraStream _stream;
   FrameSaver _saver;
   std::thread _stream_thread;
+  std::atomic_bool _continue = true;
   std::atomic_bool _record = false;
   std::atomic_bool _display = false;
   mutable std::mutex _frame_guard;
