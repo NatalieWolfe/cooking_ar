@@ -10,15 +10,7 @@
 namespace recording {
 
 // Returns the ChAruCo board used for calibration.
-cv::Ptr<cv::aruco::CharucoBoard> get_charuco_board() {
-  static cv::Ptr<cv::aruco::CharucoBoard> board =
-    cv::aruco::CharucoBoard::create(
-      /*squaresX=*/5, /*squaresY=*/7,
-      /*squareLength=*/0.0303f, /*markerLength*/0.01515f,
-      cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250)
-    );
-  return board;
-}
+cv::Ptr<cv::aruco::CharucoBoard> get_charuco_board();
 
 struct CameraCalibration {
   cv::Mat matrix;       // Projection matrix.

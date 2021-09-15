@@ -41,6 +41,16 @@ void draw_corners(
 
 }
 
+cv::Ptr<cv::aruco::CharucoBoard> get_charuco_board() {
+  static cv::Ptr<cv::aruco::CharucoBoard> board =
+    cv::aruco::CharucoBoard::create(
+      /*squaresX=*/5, /*squaresY=*/7,
+      /*squareLength=*/0.0303f, /*markerLength*/0.01515f,
+      cv::aruco::getPredefinedDictionary(cv::aruco::DICT_6X6_250)
+    );
+  return board;
+}
+
 void CharucoCalibrator::set_latest_frame(cv::Mat frame) {
   frame.copyTo(_frame);
   // _debug_text = _parameters.device.device_path.string() + '\n';
