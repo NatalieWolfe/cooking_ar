@@ -31,11 +31,19 @@ cc_library(
   deps = [":camera_stream"],
 )
 
+cc_library(
+  name = "input",
+  srcs = ["input.cpp"],
+  hdrs = ["input.h"],
+  deps = ["//third_party:opencv"],
+)
+
 cc_binary(
   name = "monitor",
   srcs = ["monitor.cpp"],
   deps = [
-    ":camera_stream",
-    ":frame_saver",
+    ":camera_controller",
+    ":charuco",
+    ":input",
   ],
 )
