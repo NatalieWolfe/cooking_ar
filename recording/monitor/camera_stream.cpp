@@ -55,7 +55,10 @@ std::string start_stream(int socket) {
   char status_buffer[SUCCESS_LINE.size()] = {0};
   int bytes_received =
     ::recv(socket, (void*)status_buffer, sizeof(status_buffer), /*flags=*/0);
-  std::string_view line_view{status_buffer};
+  std::string_view line_view{
+    status_buffer,
+    static_cast<std::size_t>(bytes_received)
+  };
   if (bytes_received <=0 || line_view != SUCCESS_LINE) {
     ::close(socket);
     throw std::runtime_error{"Stream returned non-200 response."};
@@ -191,8 +194,15 @@ void CameraStream::read_frame(std::ostream& out) {
 
   // Read the trailing line ending after the content and throw it away.
   bytes_received = ::recv(_socket, (void*)buffer, 2, /*flags=*/0);
+  if (bytes_received == 1 && *buffer == '\r') {
+    bytes_received = ::recv(_socket, (void*)(buffer + 1), 1, /*flags=*/0);
+    if (bytes_received == 1) bytes_received = 2;
+  }
   if (bytes_received != 2 || std::string_view{buffer, 2} != "\r\n") {
-    throw std::runtime_error{"Failed to read trailing newline after content."};
+    throw std::runtime_error{
+      "Failed to read trailing newline after content: " +
+      std::to_string(bytes_received)
+    };
   }
 }
 
