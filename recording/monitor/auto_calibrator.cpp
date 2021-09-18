@@ -9,6 +9,7 @@
 #include <mutex>
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <random>
 #include <string>
 #include <thread>
 #include <vector>
@@ -21,8 +22,9 @@ using namespace recording;
 using std::chrono::duration_cast;
 
 constexpr std::size_t POOL_SIZE = 24;
-constexpr std::size_t MAX_CALIBRATION_SET = 50;
+constexpr std::size_t MAX_CALIBRATION_SET = 25;
 constexpr double FILTER_ALPHA = 0.1;
+constexpr double ERROR_RATE_GOAL = 0.1;
 
 struct Frame {
   std::filesystem::path path;
@@ -68,10 +70,12 @@ class FrameSelector {
 };
 
 template <typename Func>
-void pool(std::size_t count, Func&& func) {
+void pool(Func&& func) {
   std::vector<std::unique_ptr<std::thread>> threads;
+  std::size_t count = 0;//std::thread::hardware_concurrency();
+  if (!count) count = POOL_SIZE;
   for (std::size_t i = 0; i < count; ++i) {
-    threads.push_back(std::make_unique<std::thread>(std::forward<Func>(func)));
+    threads.push_back(std::make_unique<std::thread>(func));
   }
   for (auto& thread : threads) thread->join();
 }
@@ -87,7 +91,7 @@ std::vector<Frame> load_frames() {
   std::cout << "Loading from " << frame_dir << std::endl;
   std::vector<Frame> frames{files.size(), Frame{}};
   std::atomic_size_t total = 0;
-  pool(POOL_SIZE, [&]() {
+  pool([&]() {
     auto calibrator = std::make_unique<CharucoCalibrator>(calibration_board);
     std::size_t i;
     while ((i = total++), i < files.size()) {
@@ -154,7 +158,7 @@ void brute_force(const std::vector<Frame>& frames) {
     } while (total_tested != previous_total);
   }};
 
-  pool(POOL_SIZE, [&]() {
+  pool([&]() {
     std::size_t tested = 0;
     std::string last_error;
     std::size_t last_error_count = 0;
@@ -218,7 +222,8 @@ double estimate_grid_quality(
   int y_grid_step = frames.front().image.rows / grid_size;
   std::vector<int> points_in_cell(grid_size * grid_size, 0);
 
-  for (std::size_t i = 0; i < frames.size(); ++i) {
+  std::size_t frames_to_test = std::min(frames.size(), MAX_CALIBRATION_SET);
+  for (std::size_t i = 0; i < frames_to_test; ++i) {
     if (i == exclude) continue;
     const cv::Mat& corners = frames.at(i).corners;
     for (int j = 0; j < corners.size[0]; ++j) {
@@ -235,58 +240,101 @@ double estimate_grid_quality(
   return mean.at<double>(0) / (std_dev.at<double>(0) + 1e-7);
 }
 
-void reductive(std::vector<Frame> frames) {
-  double best_error_rate = 420.69;
-  std::size_t total_tested = 0;
+void reductive(const std::vector<Frame>& original_frames) {
+  std::atomic<double> best_error_rate = 420.69;
+  std::atomic_size_t total_tested = 0;
+  std::mutex frame_guard;
+  std::vector<Frame> best_frames;
+  std::atomic_bool finished = false;
 
-  while (frames.size() > 8) {
-    ++total_tested;
-    CharucoCalibrator calibrator{get_charuco_board()};
-    std::size_t frames_to_test = std::min(frames.size(), MAX_CALIBRATION_SET);
-    for (std::size_t i = 0; i < frames_to_test; ++i) {
-      calibrator.add_corners(frames.at(i).corners, frames.at(i).corner_ids);
-    }
-    calibrator.set_latest_frame(frames.front().image, /*extract_board=*/false);
-    std::vector<double> frame_errors(frames.size(), 0.0);
-    double error_rate = calibrator.calibrate(frame_errors);
+  std::thread observer{[&]() {
+    double previous_best =  best_error_rate;
 
-    if (error_rate < 1.0 && error_rate < best_error_rate) {
-      best_error_rate = error_rate;
-      std::cout
-        << "--------------------\n"
-        << error_rate << " with " << total_tested << " tested." << std::endl;
-      for (std::size_t i = 0; i < frames_to_test; ++i) {
-        std::cout << frames.at(i).path << std::endl;
+    do {
+      std::this_thread::sleep_for(100ms);
+      if (best_error_rate < previous_best) {
+        std::scoped_lock lock{frame_guard};
+        previous_best = best_error_rate;
+        std::cout
+          << best_error_rate << "; " << total_tested << " tested." << std::endl;
+        for (const Frame& frame : best_frames) {
+          std::cout << frame.path << std::endl;
+        }
+      }
+      std::cout << total_tested << "\r" << std::flush;
+    } while (!finished);
+    std::cout << "Finished after " << total_tested << " tests." << std::endl;
+  }};
+
+  pool([&]() {
+    while (total_tested < original_frames.size() * 50) {
+      std::vector<Frame> frames{original_frames};
+      std::shuffle(frames.begin(), frames.end(), std::random_device{});
+
+      std::size_t test_count = 0;
+      while (
+        frames.size() > 8 &&
+        test_count < (5 * MAX_CALIBRATION_SET) &&
+        best_error_rate > ERROR_RATE_GOAL
+      ) {
+        ++total_tested;
+        ++test_count;
+        CharucoCalibrator calibrator{get_charuco_board()};
+        std::size_t frames_to_test =
+          std::min(frames.size(), MAX_CALIBRATION_SET);
+        for (std::size_t i = 0; i < frames_to_test; ++i) {
+          calibrator.add_corners(frames.at(i).corners, frames.at(i).corner_ids);
+        }
+        calibrator.set_latest_frame(
+          frames.front().image,
+          /*extract_board=*/false
+        );
+        std::vector<double> frame_errors(frames.size(), 0.0);
+        double error_rate = calibrator.calibrate(frame_errors);
+
+        if (error_rate < 0.2 && error_rate < best_error_rate) {
+          std::scoped_lock lock{frame_guard};
+          if (error_rate < best_error_rate) {
+            best_error_rate = error_rate;
+            best_frames.clear();
+            std::copy(
+              frames.begin(),
+              frames.begin() + frames_to_test,
+              std::back_inserter(best_frames)
+            );
+          }
+        }
+
+        double grid_quality = estimate_grid_quality(frames);
+
+        std::size_t worst_frame_idx = -1;
+        double worst_value = -420.69;
+        for (std::size_t i = 0; i < frames_to_test; ++i) {
+          double grid_quality_delta =
+            estimate_grid_quality(frames, /*exclude=*/i) - grid_quality;
+          double frame_error = frame_errors.at(i);
+          double frame_value =
+            (frame_error * FILTER_ALPHA) +
+            (grid_quality_delta * (1.0 - FILTER_ALPHA));
+
+          if (frame_value > worst_value) {
+            worst_value = frame_value;
+            worst_frame_idx = i;
+          }
+        }
+
+        if (worst_frame_idx == static_cast<std::size_t>(-1)) {
+          std::cout << "No bad frame found." << std::endl;
+          break;
+        } else {
+          frames.erase(frames.begin() + worst_frame_idx);
+        }
       }
     }
+  });
 
-    double grid_quality = estimate_grid_quality(frames);
-
-    std::size_t worst_frame_idx = -1;
-    double worst_value = -420.69;
-    for (std::size_t i = 0; i < frames_to_test; ++i) {
-      double grid_quality_delta =
-        estimate_grid_quality(frames, /*exclude=*/i) - grid_quality;
-      double frame_error = frame_errors.at(i);
-      double frame_value =
-        (frame_error * FILTER_ALPHA) +
-        (grid_quality_delta * (1.0 - FILTER_ALPHA));
-
-      if (frame_value > worst_value) {
-        worst_value = frame_value;
-        worst_frame_idx = i;
-      }
-    }
-
-    if (worst_frame_idx == static_cast<std::size_t>(-1)) {
-      std::cout << "No bad frame found." << std::endl;
-      break;
-    } else {
-      std::cout
-        << "Dropping frame " << frames.at(worst_frame_idx).path << std::endl;
-      frames.erase(frames.begin() + worst_frame_idx);
-    }
-  }
+  finished = true;
+  observer.join();
 }
 
 int main() {
