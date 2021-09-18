@@ -55,6 +55,7 @@ public:
   // Calculates the camera projection matrix and distortion coefficients, saving
   // them to the calibration struct.
   double calibrate();
+  double calibrate(std::vector<double>& per_frame_errors);
 
   // Returns the last frame that was added.
   const cv::Mat& latest_frame() const { return _frame; }

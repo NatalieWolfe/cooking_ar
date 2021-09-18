@@ -180,6 +180,17 @@ double CharucoCalibrator::calibrate() {
   );
 }
 
+double CharucoCalibrator::calibrate(std::vector<double>& per_frame_errors) {
+  return _error_rate = cv::aruco::calibrateCameraCharuco(
+    _saved_corners, _saved_corner_ids, _board, _frame.size(),
+    _calibration.matrix, _calibration.distortion,
+    _calibration.rotation, _calibration.translation,
+    /*stdDeviationsIntrinsics=*/cv::noArray(),
+    /*stdDeviationsExtrinsics=*/cv::noArray(),
+    per_frame_errors
+  );
+}
+
 bool CharucoCalibrator::_estimate_pose() {
   return cv::aruco::estimatePoseCharucoBoard(
     _last_corners,
