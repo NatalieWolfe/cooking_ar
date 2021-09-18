@@ -21,6 +21,8 @@ using namespace recording;
 using std::chrono::duration_cast;
 
 constexpr std::size_t POOL_SIZE = 24;
+constexpr std::size_t MAX_CALIBRATION_SET = 50;
+constexpr double FILTER_ALPHA = 0.1;
 
 struct Frame {
   std::filesystem::path path;
@@ -133,14 +135,11 @@ double calibrate(
   return calibrator.calibrated() ? error_rate : 420.69;
 }
 
-int main() {
-  std::vector<Frame> frames = load_frames();
-
+void brute_force(const std::vector<Frame>& frames) {
   FrameSelector selector{frames.size()};
   std::atomic<double> best_error_rate = 420.69;
   std::atomic_size_t total_tested = 0;
   std::mutex frame_guard;
-  std::vector<std::size_t> best_frames;
 
   std::thread observer{[&]() {
     std::size_t previous_total = 0;
@@ -193,7 +192,6 @@ int main() {
       if (error_rate >= best_error_rate) continue;
 
       best_error_rate = error_rate;
-      best_frames = *selection;
       std::cout << "--------------------\n" << error_rate << std::endl;
       std::cout
         << tested << " of " << total_tested << " in "
@@ -202,11 +200,100 @@ int main() {
         << " ms average)" << std::endl;
       tested = 0;
       dur = 0ns;
-      for (std::size_t i : best_frames) {
+      for (std::size_t i : *selection) {
         std::cout << frames[i - 1].path << std::endl;
       }
     }
   });
+}
+
+// -------------------------------------------------------------------------- //
+
+double estimate_grid_quality(
+  const std::vector<Frame>& frames,
+  std::size_t exclude = -1
+) {
+  int grid_size = 10;
+  int x_grid_step = frames.front().image.cols / grid_size;
+  int y_grid_step = frames.front().image.rows / grid_size;
+  std::vector<int> points_in_cell(grid_size * grid_size, 0);
+
+  for (std::size_t i = 0; i < frames.size(); ++i) {
+    if (i == exclude) continue;
+    const cv::Mat& corners = frames.at(i).corners;
+    for (int j = 0; j < corners.size[0]; ++j) {
+      int x = static_cast<int>(corners.at<float>(j, 0) / x_grid_step);
+      int y = static_cast<int>(corners.at<float>(j, 1) / y_grid_step);
+      ++points_in_cell[(x * grid_size) + y];
+    }
+  }
+
+  cv::Mat mean;
+  cv::Mat std_dev;
+  cv::meanStdDev(points_in_cell, mean, std_dev);
+
+  return mean.at<double>(0) / (std_dev.at<double>(0) + 1e-7);
+}
+
+void reductive(std::vector<Frame> frames) {
+  double best_error_rate = 420.69;
+  std::size_t total_tested = 0;
+
+  while (frames.size() > 8) {
+    ++total_tested;
+    CharucoCalibrator calibrator{get_charuco_board()};
+    std::size_t frames_to_test = std::min(frames.size(), MAX_CALIBRATION_SET);
+    for (std::size_t i = 0; i < frames_to_test; ++i) {
+      calibrator.add_corners(frames.at(i).corners, frames.at(i).corner_ids);
+    }
+    calibrator.set_latest_frame(frames.front().image, /*extract_board=*/false);
+    std::vector<double> frame_errors(frames.size(), 0.0);
+    double error_rate = calibrator.calibrate(frame_errors);
+
+    if (error_rate < 1.0 && error_rate < best_error_rate) {
+      best_error_rate = error_rate;
+      std::cout
+        << "--------------------\n"
+        << error_rate << " with " << total_tested << " tested." << std::endl;
+      for (std::size_t i = 0; i < frames_to_test; ++i) {
+        std::cout << frames.at(i).path << std::endl;
+      }
+    }
+
+    double grid_quality = estimate_grid_quality(frames);
+
+    std::size_t worst_frame_idx = -1;
+    double worst_value = -420.69;
+    for (std::size_t i = 0; i < frames_to_test; ++i) {
+      double grid_quality_delta =
+        estimate_grid_quality(frames, /*exclude=*/i) - grid_quality;
+      double frame_error = frame_errors.at(i);
+      double frame_value =
+        (frame_error * FILTER_ALPHA) +
+        (grid_quality_delta * (1.0 - FILTER_ALPHA));
+
+      if (frame_value > worst_value) {
+        worst_value = frame_value;
+        worst_frame_idx = i;
+      }
+    }
+
+    if (worst_frame_idx == static_cast<std::size_t>(-1)) {
+      std::cout << "No bad frame found." << std::endl;
+      break;
+    } else {
+      std::cout
+        << "Dropping frame " << frames.at(worst_frame_idx).path << std::endl;
+      frames.erase(frames.begin() + worst_frame_idx);
+    }
+  }
+}
+
+int main() {
+  std::vector<Frame> frames = load_frames();
+
+  // brute_force(frames);
+  reductive(frames);
 
   return 0;
 }
