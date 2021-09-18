@@ -1,5 +1,15 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
+cc_binary(
+  name = "auto_calibrator",
+  srcs = ["auto_calibrator.cpp"],
+  data = ["//res/frames"],
+  deps = [
+    ":charuco",
+    "//third_party:opencv",
+  ],
+)
+
 cc_library(
   name = "camera_controller",
   srcs = ["camera_controller.cpp"],
@@ -45,5 +55,6 @@ cc_binary(
     ":camera_controller",
     ":charuco",
     ":input",
+    "//third_party:opencv",
   ],
 )

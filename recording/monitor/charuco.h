@@ -3,8 +3,10 @@
 #include <opencv2/aruco.hpp>
 #include <opencv2/aruco/charuco.hpp>
 #include <opencv2/core.hpp>
+#include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace recording {
@@ -27,12 +29,21 @@ public:
 
   // Replaces the latest frame with the one given and attempts to detect the
   // board.
-  void set_latest_frame(cv::Mat frame);
+  void set_latest_frame(cv::Mat frame, bool extract_board = true);
   // Saves the board information from the current frame and attempts
   // calibration.
   void save_latest_frame();
   // Drops the most recent saved frame and attempts to recalibrate.
   void drop_latest_frame();
+
+  void add_corners(cv::Mat corners, cv::Mat corner_ids) {
+    _saved_corners.push_back(std::move(corners));
+    _saved_corner_ids.push_back(std::move(corner_ids));
+  }
+
+  std::optional<std::pair<cv::Mat, cv::Mat>> extract_charuco(
+    cv::Mat frame
+  ) const;
 
   // Returns true if possible calibration data has been generated.
   bool calibrated() const {
@@ -40,6 +51,10 @@ public:
   }
   // Returns the calculated calibration data.
   const CameraCalibration& calibration() const { return _calibration; }
+
+  // Calculates the camera projection matrix and distortion coefficients, saving
+  // them to the calibration struct.
+  double calibrate();
 
   // Returns the last frame that was added.
   const cv::Mat& latest_frame() const { return _frame; }
@@ -55,9 +70,6 @@ public:
   std::string_view debug_text() const { return _debug_text; }
 
 private:
-  // Calculates the camera projection matrix and distortion coefficients, saving
-  // them to the calibration struct.
-  void _calibrate();
 
   // Estimates the pose of the charuco board and saves the results into the
   // calibration struct.
