@@ -39,3 +39,29 @@ __pycache__
 
 # Random test data
 res/frames
+
+# Unity project directories
+unity/projects/*/[Ll]ibrary/
+unity/projects/*/[Tt]emp/
+unity/projects/*/[Oo]bj/
+unity/projects/*/[Bb]uild/
+unity/projects/*/[Bb]uilds/
+unity/projects/*/[Ll]ogs/
+unity/projects/*/[Uu]ser[Ss]ettings/
+unity/projects/*/[Mm]emory[Cc]aptures/
+unity/projects/*/[Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
+unity/projects/*/[Aa]ssets/[Ss]treaming[Aa]ssets/aa.meta
+unity/projects/*/[Aa]ssets/[Ss]treaming[Aa]ssets/aa/*
+unity/projects/*/[Aa]ssets/[Pp]lugins/[Ee]ditor/[Jj]et[Bb]rains*
+
+# Unity generated meta files
+!unity/projects/*/[Aa]ssets/**/*.meta
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+
+# Unity builds
+*.apk
+*.aab
+*.unitypackage
