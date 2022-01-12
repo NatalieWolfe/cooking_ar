@@ -9,6 +9,7 @@ namespace {
 using std::filesystem::create_directories;
 using std::filesystem::path;
 
+const path SESSION_DIR = "sessions";
 const path CAMERA_DIR = "cameras";
 const path LEFT_RECORDING_DIR = "recordings/left";
 const path RIGHT_RECORDING_DIR = "recordings/right";
@@ -34,6 +35,10 @@ Project::Project(path dir): _root{std::move(dir)} {
     // "/foo/bar" and "/foo/bar/" should both result in the project name "bar".
     _name = _root.parent_path().filename();
   }
+}
+
+std::filesystem::path Project::session_directory() const {
+  return directory() / SESSION_DIR / _session_id;
 }
 
 CameraDirectory Project::add_camera(std::string_view name) {

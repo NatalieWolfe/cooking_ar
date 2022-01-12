@@ -1,4 +1,5 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
 
 cc_library(
   name = "opencv",
@@ -26,4 +27,13 @@ cc_library(
     "-ldepthai-opencv",
     "-ldepthai-resources",
   ],
+)
+
+cmake(
+  name = "fmtlib",
+  # cache_entries = {
+  #   "CMAKE_C_FLAGS": "-fPIC",
+  # },
+  lib_source = "@fmtlib//:all",
+  out_static_libs = ["libfmt.a"],
 )
