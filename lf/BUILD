@@ -2,6 +2,7 @@ load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
 
 cc_library(
   name = "queue",
+  visibility = ["//visibility:public"],
   hdrs = ["queue.h"],
   srcs = ["queue.cpp"],
 )
