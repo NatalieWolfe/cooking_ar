@@ -8,3 +8,12 @@ cc_library(
     "//third_party:depthai",
   ],
 )
+
+cc_test(
+  name = "oakd_camera_test",
+  srcs = ["oakd_camera_test.cpp"],
+  deps = [
+    ":oakd_camera",
+    "@gtest//:gtest_main",
+  ],
+)
