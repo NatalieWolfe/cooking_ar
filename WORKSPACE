@@ -49,3 +49,15 @@ http_archive(
     'visibility = ["@//third_party/opencv:__subpackages__"])',
   url = "https://github.com/opencv/opencv_contrib/archive/refs/tags/4.5.2.zip",
 )
+
+new_local_repository(
+  name = "depthai_3rdparty",
+  path = "/usr/local/include/depthai-shared/3rdparty",
+  build_file = "third_party/depthai_3rdparty.BUILD",
+)
+
+new_local_repository(
+  name = "depthai_dependencies",
+  path = "/usr/local/lib/cmake/depthai/dependencies",
+  build_file = "third_party/depthai_dependencies.BUILD",
+)

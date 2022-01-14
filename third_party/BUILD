@@ -1,5 +1,4 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
-load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
 
 cc_library(
   name = "opencv",
@@ -26,14 +25,17 @@ cc_library(
     "-ldepthai-core",
     "-ldepthai-opencv",
     "-ldepthai-resources",
+    "-lusb-1.0",
   ],
-)
-
-cmake(
-  name = "fmtlib",
-  # cache_entries = {
-  #   "CMAKE_C_FLAGS": "-fPIC",
-  # },
-  lib_source = "@fmtlib//:all",
-  out_static_libs = ["libfmt.a"],
+  deps = [
+    "@depthai_3rdparty//:tl",
+    "@depthai_dependencies//:archive",
+    "@depthai_dependencies//:bz2",
+    "@depthai_dependencies//:lzma",
+    "@depthai_dependencies//:nlohmann",
+    "@depthai_dependencies//:nop",
+    "@depthai_dependencies//:spdlog",
+    "@depthai_dependencies//:xlink",
+    "@depthai_dependencies//:zlib",
+  ],
 )
