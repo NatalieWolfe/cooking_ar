@@ -22,6 +22,15 @@ git_repository(
 )
 
 http_archive(
+  name = "fmtlib",
+  strip_prefix = "fmt-8.1.1",
+  build_file_content =
+    'filegroup(name = "all", srcs = glob(["**"]), ' +
+    'visibility = ["@//third_party:__subpackages__"])',
+  url = "https://github.com/fmtlib/fmt/archive/refs/tags/8.1.1.zip"
+)
+
+http_archive(
   name = "opencv",
   strip_prefix = "opencv-4.5.2",
   sha256 = "be976b9ef14f1deaa282fb6e30d75aa8016a2d5c1f08e85795c235148940d753",
@@ -39,4 +48,16 @@ http_archive(
     'filegroup(name = "modules", srcs = glob(["modules/**"]), ' +
     'visibility = ["@//third_party/opencv:__subpackages__"])',
   url = "https://github.com/opencv/opencv_contrib/archive/refs/tags/4.5.2.zip",
+)
+
+new_local_repository(
+  name = "depthai_3rdparty",
+  path = "/usr/local/include/depthai-shared/3rdparty",
+  build_file = "third_party/depthai_3rdparty.BUILD",
+)
+
+new_local_repository(
+  name = "depthai_dependencies",
+  path = "/usr/local/lib/cmake/depthai/dependencies",
+  build_file = "third_party/depthai_dependencies.BUILD",
 )
