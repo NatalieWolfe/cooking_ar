@@ -1,4 +1,4 @@
-load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library", "cc_test")
 
 cc_library(
   name = "oakd_camera",
@@ -15,5 +15,16 @@ cc_test(
   deps = [
     ":oakd_camera",
     "@gtest//:gtest_main",
+  ],
+)
+
+cc_binary(
+  name = "record",
+  srcs = ["record.cpp"],
+  deps = [
+    ":oakd_camera",
+    "//episode:project",
+    "//lf:queue",
+    "//third_party:depthai",
   ],
 )
