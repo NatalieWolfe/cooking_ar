@@ -28,6 +28,7 @@ cc_library(
     "-lusb-1.0",
   ],
   deps = [
+    ":opencv",
     "@depthai_3rdparty//:tl",
     "@depthai_dependencies//:archive",
     "@depthai_dependencies//:bz2",

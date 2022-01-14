@@ -67,6 +67,7 @@ cc_library(
     "-L/usr/local/lib/cmake/depthai/dependencies/lib",
     "-lXLink",
     "-lusb-1.0",
+    "-pthread",
   ],
 )
 
