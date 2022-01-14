@@ -3,16 +3,19 @@
 #include <filesystem>
 #include <string_view>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace episode {
 namespace {
 
-using std::filesystem::exists;
-using std::filesystem::path;
-using std::filesystem::remove_all;
+using ::std::filesystem::exists;
+using ::std::filesystem::path;
+using ::std::filesystem::remove_all;
+using ::testing::MatchesRegex;
 
 const path CAMERA_DIR = "cameras";
+const path SESSION_DIR = "sessions";
 const path PROJECTS_DIR = "/tmp/testing/ar/episode/project";
 constexpr std::string_view TEST_CAM = "test_cam_1";
 
@@ -28,9 +31,16 @@ TEST(Project, Open) {
   clean_slate();
   Project p = Project::open(PROJECTS_DIR / test_name());
   ASSERT_TRUE(exists(PROJECTS_DIR / test_name()));
-  EXPECT_TRUE(exists(PROJECTS_DIR / test_name() / CAMERA_DIR));
+  EXPECT_TRUE(exists(p.session_directory() / CAMERA_DIR));
 
   EXPECT_EQ(p.directory(), PROJECTS_DIR / test_name());
+  EXPECT_THAT(
+    p.session_directory(),
+    MatchesRegex(
+      (PROJECTS_DIR / test_name() / SESSION_DIR).string() +
+      R"re(/[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2})re"
+    )
+  );
   EXPECT_EQ(p.name(), test_name());
 }
 

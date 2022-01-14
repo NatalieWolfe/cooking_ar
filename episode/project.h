@@ -64,7 +64,7 @@ public:
   CameraDirectory camera(std::string_view name) const;
 
 private:
-  explicit Project(std::filesystem::path dir);
+  explicit Project(std::filesystem::path dir, std::string session_id);
 
   std::filesystem::path _root;
   std::string _name;
