@@ -3,12 +3,12 @@
 #include <iomanip>
 #include <iostream>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <thread>
 
 #include <depthai/depthai.hpp>
 
+#include "episode/frames.h"
 #include "episode/project.h"
 #include "lf/queue.h"
 #include "recording/oakd_camera.h"
@@ -28,12 +28,6 @@ using ::std::chrono::time_point;
 
 constexpr std::size_t FRAME_BUFFER = 1000;
 
-std::string frame_file(std::size_t id) {
-  std::stringstream name;
-  name << std::setw(8) << std::setfill('0') << std::right << id << ".png";
-  return name.str();
-}
-
 }
 
 int main(int argc, char* argv[]) {
@@ -52,6 +46,11 @@ int main(int argc, char* argv[]) {
 
   std::thread frame_saver{[&]() {
     std::string last_message;
+    episode::FrameRange right_frame_range{dir.right_recording};
+    episode::FrameRange left_frame_range{dir.left_recording};
+    auto right_frame_files = right_frame_range.begin();
+    auto left_frame_files = left_frame_range.begin();
+
     while (run || !frames.empty()) {
       std::optional<OakDFrames> frame = frames.pop();
       if (!frame) continue;
@@ -59,12 +58,11 @@ int main(int argc, char* argv[]) {
       cv::Mat right = frame->right->getCvFrame();
       cv::Mat left = frame->left->getCvFrame();
 
-      std::string filename = frame_file(++counter);
-      cv::imwrite(dir.right_recording / filename, right);
-      cv::imwrite(dir.left_recording / filename, left);
-
+      cv::imwrite(*right_frame_files, right);
+      cv::imwrite(*left_frame_files, left);
       cv::imshow("right", right);
       cv::imshow("left", left);
+      ++counter; ++right_frame_files; ++left_frame_files;
 
       int key = cv::waitKey(1);
       if (key == 'q' || key == 'Q') run = false;

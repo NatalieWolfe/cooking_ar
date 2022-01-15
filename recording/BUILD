@@ -23,6 +23,7 @@ cc_binary(
   srcs = ["record.cpp"],
   deps = [
     ":oakd_camera",
+    "//episode:frames",
     "//episode:project",
     "//lf:queue",
     "//third_party:depthai",
