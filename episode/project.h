@@ -106,6 +106,19 @@ public:
   CameraDirectory camera(std::string_view name) const;
   CameraDirectory camera(std::string_view name, std::string_view session) const;
 
+  /**
+   * @brief Lists all the cameras added to the given session.
+   *
+   * @param session The session to list cameras for. Defaults to the current
+   *  session.
+   */
+  std::vector<CameraDirectory> cameras(std::string_view session) const;
+  std::vector<CameraDirectory> cameras() const;
+
+  std::filesystem::path pose_path_for_frame(
+    const std::filesystem::path& frame_path
+  ) const;
+
 private:
   explicit Project(std::filesystem::path dir, std::string session_id);
 

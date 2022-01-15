@@ -14,6 +14,7 @@ namespace episode {
 namespace {
 
 using ::std::filesystem::create_directories;
+using ::std::filesystem::directory_iterator;
 using ::std::filesystem::is_directory;
 using ::std::filesystem::path;
 using ::std::chrono::system_clock;
@@ -23,6 +24,7 @@ const path CAMERA_DIR = "cameras";
 const path LEFT_RECORDING_DIR = "recordings/left";
 const path RIGHT_RECORDING_DIR = "recordings/right";
 const path CALIBRATION_FILE = "calibration.json";
+const path POSE_SUFFIX = "_pose.json";
 
 std::string make_session_id() {
   std::stringstream id;
@@ -101,7 +103,7 @@ bool Project::has_session(std::string_view session) const {
 std::vector<std::string> Project::sessions() const {
   std::vector<std::string> session_ids;
   path sessions_dir = directory() / SESSION_DIR;
-  for (const auto& entry : std::filesystem::directory_iterator{sessions_dir}) {
+  for (const auto& entry : directory_iterator{sessions_dir}) {
     if (entry.is_directory()) {
       session_ids.push_back(entry.path().filename());
     }
@@ -154,6 +156,32 @@ CameraDirectory Project::camera(std::string_view name) const {
     throw lw::FailedPrecondition() << "No active session.";
   }
   return camera(name, _session_id);
+}
+
+std::vector<CameraDirectory> Project::cameras(std::string_view session) const {
+  const path& session_path = session_directory(session);
+  std::vector<CameraDirectory> cams;
+  for (const auto& entry : directory_iterator{session_path / CAMERA_DIR}) {
+    if (entry.is_directory()) {
+      cams.push_back(
+        make_camera_directory(session_path, entry.path().filename().string())
+      );
+    }
+  }
+  return cams;
+}
+
+std::vector<CameraDirectory> Project::cameras() const {
+  if (_session_id.empty()) {
+    throw lw::FailedPrecondition() << "No active session.";
+  }
+  return cameras(_session_id);
+}
+
+path Project::pose_path_for_frame(const path& frame_path) const {
+  path pose_path = frame_path;
+  pose_path.replace_extension() += POSE_SUFFIX;
+  return pose_path;
 }
 
 }

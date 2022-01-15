@@ -1,5 +1,6 @@
 #include "episode/project.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <string_view>
 
@@ -18,7 +19,7 @@ using ::testing::MatchesRegex;
 
 const path CAMERA_DIR = "cameras";
 const path SESSION_DIR = "sessions";
-const path PROJECTS_DIR = "/tmp/testing/ar/episode/project";
+const path PROJECTS_DIR = "episode/testing/project";
 constexpr std::string_view TEST_CAM = "test_cam_1";
 
 void clean_slate() {
@@ -124,6 +125,26 @@ TEST(Project, GetCamera) {
   EXPECT_EQ(cam.left_recording, added_cam.left_recording);
   EXPECT_EQ(cam.right_recording, added_cam.right_recording);
   EXPECT_EQ(cam.calibration_file, added_cam.calibration_file);
+}
+
+TEST(Project, GetCameras) {
+  clean_slate();
+  Project p = Project::new_session(PROJECTS_DIR / test_name());
+  p.add_camera("camera 1");
+  p.add_camera("camera 2");
+
+  std::vector<CameraDirectory> cameras = p.cameras();
+  ASSERT_EQ(cameras.size(), 2);
+  std::sort(cameras.begin(), cameras.end(), [](const auto& a, const auto& b) {
+    return a.name.compare(b.name);
+  });
+  EXPECT_EQ(cameras.at(0).name, "camera 1");
+  EXPECT_EQ(cameras.at(1).name, "camera 2");
+}
+
+TEST(Project, PosePathForFrame) {
+  Project p = Project::new_session(PROJECTS_DIR / test_name());
+  EXPECT_EQ(p.pose_path_for_frame("foo/bar.png"), "foo/bar_pose.json");
 }
 
 }
