@@ -21,6 +21,12 @@ git_repository(
   remote = "https://github.com/google/googletest.git",
 )
 
+git_repository(
+  name = "lw",
+  branch = "master",
+  remote = "https://github.com/LifeWanted/liblw.git",
+)
+
 http_archive(
   name = "fmtlib",
   strip_prefix = "fmt-8.1.1",

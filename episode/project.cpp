@@ -1,15 +1,20 @@
 #include "episode/project.h"
 
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <iomanip>
 #include <string_view>
 #include <sstream>
+#include <vector>
+
+#include "lw/err/canonical.h"
 
 namespace episode {
 namespace {
 
 using ::std::filesystem::create_directories;
+using ::std::filesystem::is_directory;
 using ::std::filesystem::path;
 using ::std::chrono::system_clock;
 
@@ -26,9 +31,31 @@ std::string make_session_id() {
   return id.str();
 }
 
+CameraDirectory make_camera_directory(
+  const path& session_path,
+  std::string_view name
+) {
+  path cam_path = session_path / CAMERA_DIR / name;
+  CameraDirectory cam{
+    .name = std::string{name},
+    .path = cam_path,
+    .left_recording = cam_path / LEFT_RECORDING_DIR,
+    .right_recording = cam_path / RIGHT_RECORDING_DIR,
+    .calibration_file = cam_path / CALIBRATION_FILE
+  };
+  return cam;
+}
+
 }
 
 Project Project::open(path dir) {
+  if (!std::filesystem::exists(dir)) {
+    throw lw::NotFound() << "No project found at " << dir;
+  }
+  return Project(std::move(dir), "");
+}
+
+Project Project::new_session(path dir) {
   std::string session_id = make_session_id();
   create_directories(dir);
   create_directories(dir / SESSION_DIR / session_id / CAMERA_DIR);
@@ -52,32 +79,81 @@ Project::Project(path dir, std::string session_id):
   }
 }
 
-std::filesystem::path Project::session_directory() const {
-  return directory() / SESSION_DIR / _session_id;
+path Project::session_directory(std::string_view session) const {
+  path dir = directory() / SESSION_DIR / session;
+  if (!is_directory(dir)) {
+    throw lw::NotFound() << "No directory for session " << session;
+  }
+  return dir;
+}
+
+path Project::session_directory() const {
+  if (_session_id.empty()) {
+    throw lw::FailedPrecondition() << "No active session.";
+  }
+  return session_directory(_session_id);
+}
+
+bool Project::has_session(std::string_view session) const {
+  return is_directory(directory() / SESSION_DIR / session);
+}
+
+std::vector<std::string> Project::sessions() const {
+  std::vector<std::string> session_ids;
+  path sessions_dir = directory() / SESSION_DIR;
+  for (const auto& entry : std::filesystem::directory_iterator{sessions_dir}) {
+    if (entry.is_directory()) {
+      session_ids.push_back(entry.path().filename());
+    }
+  }
+  std::sort(session_ids.begin(), session_ids.end());
+  return session_ids;
 }
 
 CameraDirectory Project::add_camera(std::string_view name) {
-  CameraDirectory cam = camera(name);
+  if (_session_id.empty()) {
+    throw lw::FailedPrecondition() << "No active session to add camera.";
+  }
+
+  CameraDirectory cam = make_camera_directory(session_directory(), name);
   create_directories(cam.left_recording);
   create_directories(cam.right_recording);
   return cam;
 }
 
-bool Project::has_camera(std::string_view name) const {
+bool Project::has_camera(
+  std::string_view name,
+  std::string_view session
+) const {
   // TODO(alaina): Perform a more thorough existance check.
-  return std::filesystem::exists(session_directory() / CAMERA_DIR / name);
+  return is_directory(session_directory(session) / CAMERA_DIR / name);
+}
+
+bool Project::has_camera(std::string_view name) const {
+  if (_session_id.empty()) {
+    throw lw::FailedPrecondition() << "No active session.";
+  }
+  return has_camera(name, _session_id);
+}
+
+CameraDirectory Project::camera(
+  std::string_view name,
+  std::string_view session
+) const {
+  CameraDirectory cam_dir =
+    make_camera_directory(session_directory(session), name);
+  if (!is_directory(cam_dir.path)) {
+    throw lw::NotFound()
+      << "Session " << session << " does not have a camera named " << name;
+  }
+  return cam_dir;
 }
 
 CameraDirectory Project::camera(std::string_view name) const {
-  path cam_path = session_directory() / CAMERA_DIR / name;
-  CameraDirectory cam{
-    .name = std::string{name},
-    .path = cam_path,
-    .left_recording = cam_path / LEFT_RECORDING_DIR,
-    .right_recording = cam_path / RIGHT_RECORDING_DIR,
-    .calibration_file = cam_path / CALIBRATION_FILE
-  };
-  return cam;
+  if (_session_id.empty()) {
+    throw lw::FailedPrecondition() << "No active session.";
+  }
+  return camera(name, _session_id);
 }
 
 }

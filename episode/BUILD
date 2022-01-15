@@ -22,6 +22,9 @@ cc_library(
   visibility = ["//visibility:public"],
   hdrs = ["project.h"],
   srcs = ["project.cpp"],
+  deps = [
+    "@lw//lw/err",
+  ],
 )
 
 cc_test(
@@ -30,5 +33,6 @@ cc_test(
   deps = [
     ":project",
     "@gtest//:gtest_main",
+    "@lw//lw/err",
   ],
 )

@@ -16,6 +16,7 @@
 namespace {
 
 using ::episode::CameraDirectory;
+using ::episode::FrameRange;
 using ::episode::Project;
 using ::recording::OakDCamera;
 using ::recording::OakDFrames;
@@ -36,7 +37,7 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  Project project = Project::open(argv[1]);
+  Project project = Project::new_session(argv[1]);
   std::atomic_bool run = true;
   std::size_t counter = 0;
   lf::Queue<OakDFrames> frames{FRAME_BUFFER};
@@ -46,10 +47,10 @@ int main(int argc, char* argv[]) {
 
   std::thread frame_saver{[&]() {
     std::string last_message;
-    episode::FrameRange right_frame_range{dir.right_recording};
-    episode::FrameRange left_frame_range{dir.left_recording};
-    auto right_frame_files = right_frame_range.begin();
-    auto left_frame_files = left_frame_range.begin();
+    FrameRange right_frame_range{dir.right_recording};
+    FrameRange left_frame_range{dir.left_recording};
+    FrameRange::Iterator right_frame_files = right_frame_range.begin();
+    FrameRange::Iterator left_frame_files = left_frame_range.begin();
 
     while (run || !frames.empty()) {
       std::optional<OakDFrames> frame = frames.pop();
