@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <memory>
 
 #include <depthai/depthai.hpp>
@@ -30,6 +31,8 @@ public:
    * the linked device.
    */
   OakDFrames get();
+
+  void save_calibration(const std::filesystem::path& path) const;
 
 private:
   explicit OakDCamera(

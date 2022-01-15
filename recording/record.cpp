@@ -46,9 +46,11 @@ int main(int argc, char* argv[]) {
   std::atomic_bool run = true;
   std::size_t counter = 0;
   lf::Queue<OakDFrames> frames{FRAME_BUFFER};
+  const CameraDirectory& dir = project.add_camera("oakd-lite");
+  OakDCamera cam = OakDCamera::make();
+  cam.save_calibration(dir.calibration_file);
 
   std::thread frame_saver{[&]() {
-    const CameraDirectory& cam = project.add_camera("oakd-lite");
     std::string last_message;
     while (run || !frames.empty()) {
       std::optional<OakDFrames> frame = frames.pop();
@@ -58,8 +60,8 @@ int main(int argc, char* argv[]) {
       cv::Mat left = frame->left->getCvFrame();
 
       std::string filename = frame_file(++counter);
-      cv::imwrite(cam.right_recording / filename, right);
-      cv::imwrite(cam.left_recording / filename, left);
+      cv::imwrite(dir.right_recording / filename, right);
+      cv::imwrite(dir.left_recording / filename, left);
 
       cv::imshow("right", right);
       cv::imshow("left", left);
@@ -76,7 +78,6 @@ int main(int argc, char* argv[]) {
     }
   }};
 
-  OakDCamera cam = OakDCamera::make();
   time_point start = steady_clock::now();
   while (run) {
     frames.push(cam.get());

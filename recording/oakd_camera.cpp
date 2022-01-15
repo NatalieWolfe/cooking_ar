@@ -1,5 +1,6 @@
 #include "recording/oakd_camera.h"
 
+#include <filesystem>
 #include <memory>
 #include <string_view>
 
@@ -61,6 +62,10 @@ OakDFrames OakDCamera::get() {
     .right = _right_queue->get<dai::ImgFrame>(),
     .left = _left_queue->get<dai::ImgFrame>()
   };
+}
+
+void OakDCamera::save_calibration(const std::filesystem::path& path) const {
+  _device->readCalibration().eepromToJsonFile(path.string());
 }
 
 }
