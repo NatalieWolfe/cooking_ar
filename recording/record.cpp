@@ -45,6 +45,8 @@ int main(int argc, char* argv[]) {
   OakDCamera cam = OakDCamera::make();
   cam.save_calibration(dir.calibration_file);
 
+  // Save the frames asynchronously from capture to reduce the influence of
+  // filesystem hiccups on the quality of recording.
   std::thread frame_saver{[&]() {
     std::string last_message;
     FrameRange right_frame_range{dir.right_recording};
@@ -77,16 +79,21 @@ int main(int argc, char* argv[]) {
     }
   }};
 
+  // Throw away the first frame of recording. This is often of reduced quality
+  // due to the device booting up.
+  cam.get();
+
+  // Start recording!
   time_point start = steady_clock::now();
   while (run) {
     frames.push(cam.get());
   }
   time_point end = steady_clock::now();
 
+  // Clean up and print some runtime statistics.
   std::cout << std::endl << "Exiting..." << std::endl;
   frame_saver.join();
   std::cout << frames.size() << " frames dropped." << std::endl;
-
   duration elapsed = end - start;
   double fps =
     static_cast<double>(counter) /
