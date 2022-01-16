@@ -17,6 +17,7 @@ cc_library(
   hdrs = ["pose2d.h"],
   srcs = ["pose2d.cpp"],
   deps = [
+    "@lw//lw/err",
     "//third_party:json",
   ],
 )
@@ -30,5 +31,17 @@ cc_library(
     "@lw//lw/flags",
     "//third_party:opencv",
     "//third_party:openpose",
+  ],
+)
+
+cc_binary(
+  name = "visualize",
+  srcs = ["visualize.cpp"],
+  deps = [
+    ":pose2d",
+    "//cli:keys",
+    "//episode:frames",
+    "//episode:project",
+    "//third_party:opencv",
   ],
 )
