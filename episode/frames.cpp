@@ -10,6 +10,7 @@ namespace {
 
 using ::std::filesystem::directory_entry;
 using ::std::filesystem::directory_iterator;
+using ::std::filesystem::path;
 
 constexpr std::string_view EXTENSION = ".png";
 
@@ -42,6 +43,10 @@ std::size_t FrameRange::size() const {
     if (entry.path().extension() == EXTENSION) ++counter;
   }
   return counter;
+}
+
+path FrameRange::operator[](std::size_t idx) const {
+  return _root / frame_file(idx + 1);
 }
 
 }

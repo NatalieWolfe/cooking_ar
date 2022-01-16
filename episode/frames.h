@@ -40,6 +40,8 @@ public:
 
   const std::filesystem::path& path() const { return _root; }
 
+  std::filesystem::path operator[](std::size_t idx) const;
+
 private:
   std::filesystem::path _root;
 };
