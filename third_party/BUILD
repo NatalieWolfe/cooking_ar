@@ -1,4 +1,5 @@
 load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_foreign_cc//foreign_cc:defs.bzl", "cmake")
 
 cc_library(
   name = "opencv",
@@ -39,4 +40,15 @@ cc_library(
     "@depthai_dependencies//:xlink",
     "@depthai_dependencies//:zlib",
   ],
+)
+
+cmake(
+  name = "json",
+  visibility = ["//visibility:public"],
+  lib_source = "@nlohmann_json//:all",
+  cache_entries = {
+    "JSON_BuildTests": "Off",
+    "JSON_Install": "On",
+  },
+  out_headers_only = True,
 )
