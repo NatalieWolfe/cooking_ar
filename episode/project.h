@@ -12,6 +12,7 @@ struct CameraDirectory {
   std::filesystem::path path;
   std::filesystem::path left_recording;
   std::filesystem::path right_recording;
+  std::filesystem::path poses;
   std::filesystem::path calibration_file;
 };
 
@@ -26,9 +27,12 @@ struct CameraDirectory {
  *         - cameras/
  *           - <camera_name>/
  *             - calibration.json
+ *             - poses/
+ *               - <frame_id>_pose3d.json
  *             - recordings/
  *               - <subcamera_name>/
  *                 - <frame_id>.png
+ *                 - <frame_id>_pose.json
  */
 class Project {
 public:
@@ -116,6 +120,10 @@ public:
   std::vector<CameraDirectory> cameras() const;
 
   std::filesystem::path pose_path_for_frame(
+    const std::filesystem::path& frame_path
+  ) const;
+
+  std::filesystem::path pose3d_path_for_frame(
     const std::filesystem::path& frame_path
   ) const;
 

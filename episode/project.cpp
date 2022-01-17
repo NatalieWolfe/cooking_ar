@@ -23,8 +23,10 @@ const path SESSION_DIR = "sessions";
 const path CAMERA_DIR = "cameras";
 const path LEFT_RECORDING_DIR = "recordings/left";
 const path RIGHT_RECORDING_DIR = "recordings/right";
+const path POSES_DIR = "poses";
 const path CALIBRATION_FILE = "calibration.json";
 const path POSE_SUFFIX = "_pose.json";
+const path POSE3D_SUFFIX = "_pose3d.json";
 
 std::string make_session_id() {
   std::stringstream id;
@@ -43,6 +45,7 @@ CameraDirectory make_camera_directory(
     .path = cam_path,
     .left_recording = cam_path / LEFT_RECORDING_DIR,
     .right_recording = cam_path / RIGHT_RECORDING_DIR,
+    .poses = cam_path / POSES_DIR,
     .calibration_file = cam_path / CALIBRATION_FILE
   };
   return cam;
@@ -120,6 +123,7 @@ CameraDirectory Project::add_camera(std::string_view name) {
   CameraDirectory cam = make_camera_directory(session_directory(), name);
   create_directories(cam.left_recording);
   create_directories(cam.right_recording);
+  create_directories(cam.poses);
   return cam;
 }
 
@@ -182,6 +186,23 @@ path Project::pose_path_for_frame(const path& frame_path) const {
   path pose_path = frame_path;
   pose_path.replace_extension() += POSE_SUFFIX;
   return pose_path;
+}
+
+path Project::pose3d_path_for_frame(const path& frame_path) const {
+  // Frame path:
+  // /<project>/sessions/<session>/cameras/<camera>/recordings/<socket>/<frame>
+  //
+  // Pose3d path:
+  // /<project>/sessions/<session>/cameras/<camera>/poses/<frame>
+  path frame_name = frame_path.stem();
+  frame_name += POSE3D_SUFFIX;
+
+  path cam_dir = frame_path.parent_path().parent_path().parent_path();
+  if (cam_dir.parent_path().filename() != CAMERA_DIR) {
+    throw lw::InvalidArgument()
+      << "Not a valid frame image path: " << frame_path;
+  }
+  return cam_dir / POSES_DIR / frame_name;
 }
 
 }
