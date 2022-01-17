@@ -5,8 +5,11 @@ cc_binary(
   srcs = ["extract.cpp"],
   deps = [
     ":pose2d",
+    ":pose3d",
     ":pose_extractor",
     "@lw//lw/base",
+    "//cli:progress",
+    "//episode:cameras",
     "//episode:frames",
     "//episode:project",
   ]
@@ -16,6 +19,16 @@ cc_library(
   name = "pose2d",
   hdrs = ["pose2d.h"],
   srcs = ["pose2d.cpp"],
+  deps = [
+    "@lw//lw/err",
+    "//third_party:json",
+  ],
+)
+
+cc_library(
+  name = "pose3d",
+  hdrs = ["pose3d.h"],
+  srcs = ["pose3d.cpp"],
   deps = [
     "@lw//lw/err",
     "//third_party:json",
