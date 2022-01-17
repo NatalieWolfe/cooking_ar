@@ -153,7 +153,9 @@ void draw(cv::Mat& image, const State& state) {
   put_text(image, {5, 30}, line);
 
   line =
-    std::to_string(state.frame_idx) + " : " + std::to_string(state.frame_count);
+    std::to_string(state.frame_idx) + " : " +
+    std::to_string(state.frame_count) + " : " +
+    (state.use_3d ? "3d" : "2d");
   put_text(image, {5, 45}, line);
 }
 
