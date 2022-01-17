@@ -38,22 +38,20 @@ http_archive(
 
 http_archive(
   name = "opencv",
-  strip_prefix = "opencv-4.5.2",
-  sha256 = "be976b9ef14f1deaa282fb6e30d75aa8016a2d5c1f08e85795c235148940d753",
+  strip_prefix = "opencv-4.5.3",
+  sha256 = "a61e7a4618d353140c857f25843f39b2abe5f451b018aab1604ef0bc34cd23d5",
   build_file_content =
     'filegroup(name = "all", srcs = glob(["**"]), ' +
-    'visibility = ["@//third_party/opencv:__subpackages__"])',
-  url = "https://github.com/opencv/opencv/archive/refs/tags/4.5.2.zip",
+    'visibility = ["@//third_party:__subpackages__"])',
+  url = "https://github.com/opencv/opencv/archive/refs/tags/4.5.3.zip",
 )
 
 http_archive(
   name = "opencv_contrib",
-  strip_prefix = "opencv_contrib-4.5.2",
-  sha256 = "8008ac4c623f90f8e67b2d5c58c465616d3317018beca38bd4e39b912fb6e4ae",
-  build_file_content =
-    'filegroup(name = "modules", srcs = glob(["modules/**"]), ' +
-    'visibility = ["@//third_party/opencv:__subpackages__"])',
-  url = "https://github.com/opencv/opencv_contrib/archive/refs/tags/4.5.2.zip",
+  strip_prefix = "opencv_contrib-4.5.3",
+  sha256 = "dc3317950cf0d6cab6d24ec8df864d5e7c4efe39627dbd1c7c177dc12a8bcd78",
+  build_file_content = 'exports_files(["modules"])',
+  url = "https://github.com/opencv/opencv_contrib/archive/refs/tags/4.5.3.zip",
 )
 
 http_archive(
