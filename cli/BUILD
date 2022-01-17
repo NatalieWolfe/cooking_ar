@@ -9,3 +9,10 @@ cc_library(
     "//third_party:opencv",
   ],
 )
+
+cc_library(
+  name = "progress",
+  visibility = ["//visibility:public"],
+  hdrs = ["progress.h"],
+  srcs = ["progress.cpp"],
+)
