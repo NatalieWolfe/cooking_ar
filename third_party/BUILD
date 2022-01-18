@@ -5,8 +5,7 @@ cmake(
   name = "opencv",
   visibility = ["//visibility:public"],
   lib_source = "@opencv//:all",
-  build_args = ["--parallel=28"],
-  copts = [],
+  build_args = ["--parallel=4"],
   cache_entries = {
     "CMAKE_CXX_FLAGS": "-Wno-error",
     "BUILD_JAVA": "Off",
@@ -31,12 +30,9 @@ cmake(
     "WITH_TIFF": "Off",
     "WITH_WEBP": "Off",
   },
-  build_data = [
-    "@opencv_contrib//:modules",
-  ],
-  out_static_libs = [
-    "libopencv_world.a",
-  ],
+  build_data = ["@opencv_contrib//:modules"],
+  out_static_libs = ["libopencv_world.a"],
+  out_data_dirs = ["lib"],
   linkopts = [
     "-pthread",
     "-latk-1.0",
@@ -64,6 +60,29 @@ cc_library(
     "-L/usr/local/lib",
     "-lopenpose",
   ],
+)
+
+cmake(
+  name = "openpose-direct",
+  visibility = ["//visibility:public"],
+  lib_source = "@openpose//:all",
+  build_args = ["--parallel=4"],
+  cache_entries = {
+    # "CMAKE_CXX_FLAGS": "-std=c++11",
+    "CMAKE_CXX_COMPILER": "/usr/bin/g++-9",
+    "BUILD_CAFFE": "On",
+    "BUILD_EXAMPLES": "Off",
+    "BUILD_SHARED_LIBS": "Off",
+    "GPU_MODE": "CUDA",
+    "INSTRUCTION_SET": "AVX2",
+    "OpenCV_DIR": "$(execpath //third_party:opencv)/lib/cmake/opencv4",
+    "USE_CUDNN": "On", # TODO(alaina) Re-enable this.
+    "USE_MKL": "Off",
+    "WITH_EIGEN": "FIND",
+  },
+  out_data_dirs = ["models"],
+  deps = [":opencv"],
+  tags = ["requires-network"],
 )
 
 # Must build and install https://github.com/luxonis/depthai-core separately.

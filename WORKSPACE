@@ -1,6 +1,6 @@
 workspace(name = "cooking_ar")
 
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # Load the rules_foreign_cc tooling.
@@ -52,6 +52,17 @@ http_archive(
   sha256 = "dc3317950cf0d6cab6d24ec8df864d5e7c4efe39627dbd1c7c177dc12a8bcd78",
   build_file_content = 'exports_files(["modules"])',
   url = "https://github.com/opencv/opencv_contrib/archive/refs/tags/4.5.3.zip",
+)
+
+new_git_repository(
+  name = "openpose",
+  tag = "v1.7.0",
+  remote = "https://github.com/CMU-Perceptual-Computing-Lab/openpose.git",
+  build_file_content =
+    'filegroup(name = "all", srcs = glob(["**"]), ' +
+    'visibility = ["@//third_party:__subpackages__"])',
+  init_submodules = True,
+  patches = ["@//third_party:openpose-cdnn-cmake.patch"]
 )
 
 http_archive(
