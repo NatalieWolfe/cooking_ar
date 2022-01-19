@@ -33,6 +33,7 @@ using ::episode::Project;
 using ::extraction::Pose2d;
 using ::extraction::Pose3d;
 using ::extraction::PoseExtractor;
+using ::extraction::Triangulator;
 using ::std::chrono::duration;
 using ::std::chrono::duration_cast;
 using ::std::chrono::milliseconds;
@@ -114,6 +115,7 @@ void triangulate_all_poses(const Project& project, const CameraDirectory& cam) {
 
   CameraCalibration calibration =
     episode::load_camera_calibration(cam.calibration_file);
+  Triangulator triangulator{calibration};
   cli::Progress reporter;
   std::size_t skipped = 0;
   for (std::size_t i = 0; i < frame_count; ++i) {
@@ -128,12 +130,10 @@ void triangulate_all_poses(const Project& project, const CameraDirectory& cam) {
       continue;
     }
     std::vector<Pose3d> poses;
+    poses.reserve(left_poses.size());
     for (std::size_t pose_idx = 0; pose_idx < left_poses.size(); ++pose_idx) {
       poses.push_back(
-        triangulate_pose(
-          calibration,
-          left_poses[pose_idx],
-          right_poses[pose_idx])
+        triangulator(left_poses[pose_idx], right_poses[pose_idx])
       );
     }
     extraction::write_poses(

@@ -70,15 +70,17 @@ float calc_magnitude(float x, float y, float z) {
  * given point on the image plane.
  */
 cv::Mat to_ray(
-  const CameraCalibration::Parameters& params,
-  const Pose2d::Point& point
+  const Pose2d::Point& point,
+  const cv::Mat& matrix,
+  const cv::Mat& distortion,
+  const cv::Mat& transform
 ) {
   // TODO: Switch to undistorted matrix.
   cv::Mat in_points = cv::Mat::zeros(2, 1, CV_32F);
   std::vector<cv::Point2f> out_points;
   in_points.at<float>(0, 0) = point.x;
   in_points.at<float>(1, 0) = point.y;
-  cv::undistortPoints(in_points, out_points, params.matrix, params.distortion);
+  cv::undistortPoints(in_points, out_points, matrix, distortion);
 
   // Ray from camera origin pointing at pixel on image plane.
   float p_x = out_points[0].x;
@@ -94,9 +96,6 @@ cv::Mat to_ray(
   cam_ray.at<float>(0, 1) = p_y;
   cam_ray.at<float>(0, 2) = p_z;
 
-  // Convert the rvec into a 3x3 matrix.
-  cv::Mat transform = cam_extrinsic_matrix(params);
-
   cv::Mat origin_ray = cam_ray * transform;
   float x = origin_ray.at<float>(0, 0);
   float y = origin_ray.at<float>(0, 1);
@@ -110,25 +109,67 @@ cv::Mat to_ray(
   return cam_ray;
 }
 
-Pose3d::Point triangulate(
-  const CameraCalibration& calibration,
+}
+
+Triangulator::Triangulator(const CameraCalibration& calibration):
+  _cam_l{cam_trans_to_world(calibration.left)},
+  _cam_r{cam_trans_to_world(calibration.right)},
+  _transform_l{cam_extrinsic_matrix(calibration.left)},
+  _transform_r{cam_extrinsic_matrix(calibration.right)},
+  _matrix_l{calibration.left.matrix},
+  _matrix_r{calibration.right.matrix},
+  _distortion_l{calibration.left.distortion},
+  _distortion_r{calibration.right.distortion}
+{}
+
+Pose3d Triangulator::operator()(
+  const Pose2d& left_pose,
+  const Pose2d& right_pose
+) const {
+  return {
+    .person_id = left_pose.person_id,
+    .body = _triangulate(left_pose.body, right_pose.body),
+    .face = _triangulate(left_pose.face, right_pose.face),
+    .left_paw = _triangulate(left_pose.left_paw, right_pose.left_paw),
+    .right_paw = _triangulate(left_pose.right_paw, right_pose.right_paw),
+  };
+}
+
+std::vector<Pose3d::Point> Triangulator::_triangulate(
+  std::span<const Pose2d::Point> left_points,
+  std::span<const Pose2d::Point> right_points
+) const {
+  std::vector<Pose3d::Point> points;
+  points.reserve(left_points.size());
+  for (std::size_t i = 0; i < left_points.size(); ++i) {
+    points.push_back(
+      _triangulate(left_points[i], right_points[i])
+    );
+  }
+  return points;
+}
+
+Pose3d::Point Triangulator::_triangulate(
   const Pose2d::Point& left_point,
   const Pose2d::Point& right_point
-) {
+) const {
   // Midpoint of line tracing the minimum distance between these two rays.
   // See this answer for the equations followed here and the origin of the
   // variable naming.
   // https://math.stackexchange.com/a/1037202/918090
-  cv::Mat cam_l = cam_trans_to_world(calibration.left);   // a
-  cv::Mat cam_r = cam_trans_to_world(calibration.right);  // c
-  cv::Mat ray_l = to_ray(calibration.left, left_point);   // b
-  cv::Mat ray_r = to_ray(calibration.right, right_point); // d
+  //
+  // _cam_l -> a
+  // ray_l  -> b
+  // _cam_r -> c
+  // ray_r  -> d
+  cv::Mat ray_l = to_ray(left_point, _matrix_l, _distortion_l, _transform_l);
+  cv::Mat ray_r = to_ray(right_point, _matrix_r, _distortion_r, _transform_r);
 
   double b_dot_d = ray_l.dot(ray_r);
-  double a_dot_d = cam_l.dot(ray_r);
-  double b_dot_c = ray_l.dot(cam_r);
-  double c_dot_d = cam_r.dot(ray_r);
-  double a_dot_b = cam_l.dot(ray_l);
+  double a_dot_d = _cam_l.dot(ray_r);
+  double b_dot_c = ray_l.dot(_cam_r);
+  double c_dot_d = _cam_r.dot(ray_r);
+  double a_dot_b = _cam_l.dot(ray_l);
 
   double s = (
     ((b_dot_d * (a_dot_d - b_dot_c)) - (a_dot_d * c_dot_d)) /
@@ -139,45 +180,13 @@ Pose3d::Point triangulate(
     ((b_dot_d * b_dot_d) - 1)
   );
 
-  cv::Mat midpoint = (cam_l + cam_r + (t * ray_l) + (s * ray_r)) / 2.235f;
+  cv::Mat midpoint = (_cam_l + _cam_r + (t * ray_l) + (s * ray_r)) / 2.235f;
   return {
     .point_id = left_point.point_id,
     .x = midpoint.at<float>(0, 0),
     .y = midpoint.at<float>(1, 0),
     .z = midpoint.at<float>(2, 0),
     .confidence = left_point.confidence * right_point.confidence
-  };
-}
-
-std::vector<Pose3d::Point> triangulate(
-  const CameraCalibration& calibration,
-  std::span<const Pose2d::Point> left_points,
-  std::span<const Pose2d::Point> right_points
-) {
-  std::vector<Pose3d::Point> points;
-  for (std::size_t i = 0; i < left_points.size(); ++i) {
-    points.push_back(
-      triangulate(calibration, left_points[i], right_points[i])
-    );
-  }
-  return points;
-}
-
-}
-
-Pose3d triangulate_pose(
-  const CameraCalibration& calibration,
-  const Pose2d& left_pose,
-  const Pose2d& right_pose
-) {
-  return {
-    .person_id = left_pose.person_id,
-    .body = triangulate(calibration, left_pose.body, right_pose.body),
-    .face = triangulate(calibration, left_pose.face, right_pose.face),
-    .left_paw =
-      triangulate(calibration, left_pose.left_paw, right_pose.left_paw),
-    .right_paw =
-      triangulate(calibration, left_pose.right_paw, right_pose.right_paw),
   };
 }
 
