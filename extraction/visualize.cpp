@@ -1,6 +1,7 @@
 #include <chrono>
 #include <filesystem>
 #include <iostream>
+#include <opencv2/calib3d.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
@@ -11,19 +12,22 @@
 #include <vector>
 
 #include "cli/keys.h"
+#include "episode/cameras.h"
 #include "episode/frames.h"
 #include "episode/project.h"
 #include "extraction/pose2d.h"
+#include "extraction/pose3d.h"
 
 namespace {
 
+using ::episode::CameraCalibration;
 using ::episode::CameraDirectory;
 using ::episode::FrameRange;
 using ::episode::Project;
 using ::extraction::Pose2d;
+using ::extraction::Pose3d;
+using ::std::filesystem::exists;
 using ::std::filesystem::path;
-
-constexpr std::chrono::duration KEY_DELAY = std::chrono::milliseconds(33);
 
 enum class CameraSocket {
   LEFT,
@@ -61,6 +65,12 @@ struct Font {
   int thickness = 1;
   int line_mode = cv::LINE_AA;
 };
+
+constexpr std::chrono::duration KEY_DELAY = std::chrono::milliseconds(33);
+constexpr Color BODY{0, 128, 0};
+constexpr Color FACE{0, 255, 0};
+constexpr Color RIGHT_PAW{0, 0, 128};
+constexpr Color LEFT_PAW{0, 0, 255};
 
 void switch_socket(State& state) {
   if (state.socket == CameraSocket::LEFT) {
@@ -111,6 +121,9 @@ void put_text(
   );
 }
 
+// -------------------------------------------------------------------------- //
+// Pose2d
+
 void draw(cv::Mat& image, Color color, const Pose2d::Point& point) {
   double confidence_scale = 1.0 - point.confidence;
   color.r = 255 * confidence_scale;
@@ -133,15 +146,81 @@ void draw(
 
 void draw(cv::Mat& image, const Pose2d& pose) {
   // TODO(alaina) Draw lines between points of the body and paw poses.
-  draw(image, {0, 128, 0}, pose.body);
-  draw(image, {0, 255, 0}, pose.face);
-  draw(image, {0, 0, 128}, pose.right_paw);
-  draw(image, {0, 0, 255}, pose.left_paw);
+  draw(image, BODY, pose.body);
+  draw(image, FACE, pose.face);
+  draw(image, RIGHT_PAW, pose.right_paw);
+  draw(image, LEFT_PAW, pose.left_paw);
 }
 
 void draw(cv::Mat& image, std::span<const Pose2d> poses) {
   for (const Pose2d& pose : poses) draw(image, pose);
 }
+
+// -------------------------------------------------------------------------- //
+// Pose3d
+
+void draw(
+  cv::Mat& image,
+  const cv::Mat& rvec,
+  const CameraCalibration::Parameters& params,
+  const Color& color,
+  std::span<const Pose3d::Point> points
+) {
+  std::vector<cv::Point3d> points_3d;
+  std::vector<cv::Point2d> points_2d;
+  points_3d.reserve(points.size());
+  points_2d.reserve(points.size());
+  for (const Pose3d::Point& p : points) points_3d.emplace_back(p.x, p.y, p.z);
+  cv::projectPoints(
+    points_3d,
+    rvec,
+    params.translation,
+    params.matrix,
+    params.distortion,
+    points_2d
+  );
+
+  int point_idx = 0;
+  for (const cv::Point2d& p : points_2d) {
+    const Pose3d::Point& pose_point = points[point_idx++];
+    draw(
+      image,
+      color,
+      Pose2d::Point{
+        .point_id = pose_point.point_id,
+        .x = p.x,
+        .y = p.y,
+        .confidence = pose_point.confidence
+      }
+    );
+  }
+}
+
+void draw(
+  cv::Mat& image,
+  const cv::Mat& rvec,
+  const CameraCalibration::Parameters& params,
+  const Pose3d& pose
+) {
+  // TODO(alaina) Draw lines between points of the body and paw poses.
+  draw(image, rvec, params, BODY, pose.body);
+  draw(image, rvec, params, FACE, pose.face);
+  draw(image, rvec, params, RIGHT_PAW, pose.right_paw);
+  draw(image, rvec, params, LEFT_PAW, pose.left_paw);
+}
+
+void draw(
+  cv::Mat& image,
+  const CameraCalibration::Parameters& params,
+  std::span<const Pose3d> poses
+) {
+  cv::Mat rvec;
+  cv::Rodrigues(params.rotation, rvec);
+  for (const Pose3d& pose : poses) draw(image, rvec, params, pose);
+}
+
+// -------------------------------------------------------------------------- //
+// State
 
 void draw(cv::Mat& image, const State& state) {
   put_text(image, {5, 15}, state.project.directory().string());
@@ -163,9 +242,22 @@ void display(const State& state) {
   path img_path = state.frames[state.frame_idx];
   cv::Mat image = cv::imread(img_path.string());
 
-  path pose_path = state.project.pose_path_for_frame(img_path);
-  if (std::filesystem::exists(pose_path)) {
-    draw(image, extraction::read_poses2d(pose_path));
+  if (state.use_3d) {
+    path pose_path = state.project.pose3d_path_for_frame(img_path);
+    if (exists(pose_path)) {
+      CameraCalibration calibration = episode::load_camera_calibration(
+        state.cameras.at(state.camera_idx).calibration_file
+      );
+      const CameraCalibration::Parameters& params =
+        state.socket == CameraSocket::LEFT ?
+        calibration.left : calibration.right;
+      draw(image, params, extraction::read_poses3d(pose_path));
+    }
+  } else {
+    path pose_path = state.project.pose_path_for_frame(img_path);
+    if (exists(pose_path)) {
+      draw(image, extraction::read_poses2d(pose_path));
+    }
   }
 
   draw(image, state);

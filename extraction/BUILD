@@ -65,7 +65,9 @@ cc_binary(
   srcs = ["visualize.cpp"],
   deps = [
     ":pose2d",
+    ":pose3d",
     "//cli:keys",
+    "//episode:cameras",
     "//episode:frames",
     "//episode:project",
     "//third_party:opencv",
