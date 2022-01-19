@@ -62,14 +62,16 @@ std::vector<Pose2d::Point> json_to_points(
   const json& json_pose,
   const std::string& key
 ) {
-  if (!json_pose[key].is_array()) {
+  const json& json_points = json_pose[key];
+  if (!json_points.is_array()) {
     throw lw::InvalidArgument()
       << "Pose " << key << " must be an array of points.";
   }
   std::vector<Pose2d::Point> points;
+  points.reserve(json_points.size());
   std::transform(
-    json_pose[key].begin(),
-    json_pose[key].end(),
+    json_points.begin(),
+    json_points.end(),
     std::back_inserter(points),
     &json_to_point
   );
@@ -123,6 +125,7 @@ std::vector<Pose2d> read_poses2d(const std::filesystem::path& pose_file) {
   }
 
   std::vector<Pose2d> poses;
+  poses.reserve(poses_json.size());
   try {
     std::transform(
       poses_json.begin(),
