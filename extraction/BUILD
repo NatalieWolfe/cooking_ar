@@ -7,6 +7,7 @@ cc_binary(
     ":pose2d",
     ":pose3d",
     ":pose_extractor",
+    ":triangulation",
     "@lw//lw/base",
     "//cli:progress",
     "//episode:cameras",
@@ -44,6 +45,18 @@ cc_library(
     "@lw//lw/flags",
     "//third_party:opencv",
     "//third_party:openpose",
+  ],
+)
+
+cc_library(
+  name = "triangulation",
+  hdrs = ["triangulation.h"],
+  srcs = ["triangulation.cpp"],
+  deps = [
+    ":pose2d",
+    ":pose3d",
+    "//episode:cameras",
+    "//third_party:opencv",
   ],
 )
 
