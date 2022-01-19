@@ -27,4 +27,6 @@ void write_poses(
   std::span<const Pose3d> poses
 );
 
+std::vector<Pose3d> read_poses3d(const std::filesystem::path& pose_file);
+
 }
