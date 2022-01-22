@@ -66,6 +66,8 @@ cc_binary(
   deps = [
     ":pose2d",
     ":pose3d",
+    "@lw//lw/base",
+    "@lw//lw/flags",
     "//cli:keys",
     "//episode:cameras",
     "//episode:frames",

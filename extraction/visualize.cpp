@@ -17,6 +17,13 @@
 #include "episode/project.h"
 #include "extraction/pose2d.h"
 #include "extraction/pose3d.h"
+#include "lw/base/base.h"
+#include "lw/flags/flags.h"
+
+LW_FLAG(
+  double, min_confidence, 0.5,
+  "Minimum confidence per-point required for display."
+);
 
 namespace {
 
@@ -40,8 +47,8 @@ struct State {
   std::vector<CameraDirectory> cameras;
   std::size_t session_idx = 0;
   std::size_t camera_idx = 0;
-  CameraSocket socket = CameraSocket::LEFT;
-  FrameRange frames;
+  FrameRange left_frames;
+  FrameRange right_frames;
   std::int64_t frame_idx = 0;
   std::size_t frame_count;
   bool play = false;
@@ -72,17 +79,12 @@ constexpr Color FACE{0, 255, 0};
 constexpr Color RIGHT_PAW{0, 0, 128};
 constexpr Color LEFT_PAW{0, 0, 255};
 
-void switch_socket(State& state) {
-  if (state.socket == CameraSocket::LEFT) {
-    state.socket = CameraSocket::RIGHT;
-    state.frames =
-      FrameRange{state.cameras.at(state.camera_idx).right_recording};
-  } else {
-    state.socket = CameraSocket::LEFT;
-    state.frames =
+void open_frames(State& state) {
+  state.left_frames =
       FrameRange{state.cameras.at(state.camera_idx).left_recording};
-  }
-  state.frame_count = state.frames.size();
+  state.right_frames =
+      FrameRange{state.cameras.at(state.camera_idx).right_recording};
+  state.frame_count = state.left_frames.size();
   if (static_cast<std::size_t>(state.frame_idx) > state.frame_count) {
     state.frame_idx = state.frame_count - 1;
   }
@@ -91,9 +93,8 @@ void switch_socket(State& state) {
 void open_camera(State& state, std::size_t camera_idx) {
   camera_idx %= state.cameras.size();
   state.camera_idx = camera_idx;
-  state.socket = CameraSocket::LEFT;
   state.frame_idx = 0;
-  switch_socket(state);
+  open_frames(state);
 }
 
 void open_session(State& state, std::size_t session_idx) {
@@ -125,6 +126,8 @@ void put_text(
 // Pose2d
 
 void draw(cv::Mat& image, Color color, const Pose2d::Point& point) {
+  if (point.confidence < lw::flags::min_confidence) return;
+
   double confidence_scale = 1.0 - point.confidence;
   color.r = 255 * confidence_scale;
   cv::Point center{static_cast<int>(point.x), static_cast<int>(point.y)};
@@ -227,8 +230,7 @@ void draw(cv::Mat& image, const State& state) {
 
   std::string line =
     state.sessions.at(state.session_idx) + " : " +
-    state.cameras.at(state.camera_idx).name + " : " +
-    (state.socket == CameraSocket::LEFT ? "left" : "right");
+    state.cameras.at(state.camera_idx).name;
   put_text(image, {5, 30}, line);
 
   line =
@@ -238,28 +240,47 @@ void draw(cv::Mat& image, const State& state) {
   put_text(image, {5, 45}, line);
 }
 
+void render_3d(
+  cv::Mat& image,
+  const State& state,
+  const path& img_path,
+  CameraSocket socket
+) {
+  path pose_path = state.project.pose3d_path_for_frame(img_path);
+  if (exists(pose_path)) {
+    CameraCalibration calibration = episode::load_camera_calibration(
+      state.cameras.at(state.camera_idx).calibration_file
+    );
+    const CameraCalibration::Parameters& params =
+      socket == CameraSocket::LEFT ?
+      calibration.left : calibration.right;
+    draw(image, params, extraction::read_poses3d(pose_path));
+  }
+}
+
+void render_2d(cv::Mat& image, const State& state, const path& img_path) {
+  path pose_path = state.project.pose_path_for_frame(img_path);
+  if (exists(pose_path)) {
+    draw(image, extraction::read_poses2d(pose_path));
+  }
+}
+
 void display(const State& state) {
-  path img_path = state.frames[state.frame_idx];
-  cv::Mat image = cv::imread(img_path.string());
+  path left_img_path = state.left_frames[state.frame_idx];
+  cv::Mat left_image = cv::imread(left_img_path.string());
+  path right_img_path = state.right_frames[state.frame_idx];
+  cv::Mat right_image = cv::imread(right_img_path.string());
 
   if (state.use_3d) {
-    path pose_path = state.project.pose3d_path_for_frame(img_path);
-    if (exists(pose_path)) {
-      CameraCalibration calibration = episode::load_camera_calibration(
-        state.cameras.at(state.camera_idx).calibration_file
-      );
-      const CameraCalibration::Parameters& params =
-        state.socket == CameraSocket::LEFT ?
-        calibration.left : calibration.right;
-      draw(image, params, extraction::read_poses3d(pose_path));
-    }
+    render_3d(left_image, state, left_img_path, CameraSocket::LEFT);
+    render_3d(right_image, state, right_img_path, CameraSocket::RIGHT);
   } else {
-    path pose_path = state.project.pose_path_for_frame(img_path);
-    if (exists(pose_path)) {
-      draw(image, extraction::read_poses2d(pose_path));
-    }
+    render_2d(left_image, state, left_img_path);
+    render_2d(right_image, state, right_img_path);
   }
 
+  cv::Mat image;
+  cv::hconcat(left_image, right_image, image);
   draw(image, state);
   cv::imshow("Visualizer", image);
 }
@@ -267,12 +288,17 @@ void display(const State& state) {
 }
 
 int main(int argc, const char** argv) {
+  if (!lw::init(&argc, argv)) return -2;
   if (argc != 2) {
     std::cerr << "Usage: " << argv[0] << " [PROJECT_PATH]" << std::endl;
     return -1;
   }
 
-  State state = {.project = Project::open(argv[1]), .frames = FrameRange{""}};
+  State state = {
+    .project = Project::open(argv[1]),
+    .left_frames = FrameRange{""},
+    .right_frames = FrameRange{""}
+  };
   state.sessions = state.project.sessions();
   open_session(state, 0);
   display(state);
@@ -291,7 +317,6 @@ int main(int argc, const char** argv) {
     else if (key == cli::Key::R) state.frame_idx -= 100;
     else if (key == cli::Key::A) open_session(state, state.session_idx + 1);
     else if (key == cli::Key::S) open_camera(state, state.camera_idx + 1);
-    else if (key == cli::Key::D) switch_socket(state);
     else if (key == cli::Key::M) state.use_3d = !state.use_3d;
     else if (key == cli::Key::SPACE) state.play = !state.play;
     else update_display = false;
