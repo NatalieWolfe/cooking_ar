@@ -60,6 +60,19 @@ cc_library(
   ],
 )
 
+cc_test(
+  name = "triangulation_test",
+  srcs = ["triangulation_test.cpp"],
+  data = ["//extraction/testing:pose_data"],
+  deps = [
+    ":pose2d",
+    ":pose3d",
+    ":triangulation",
+    "@gtest//:gtest_main",
+    "//third_party:opencv",
+  ]
+)
+
 cc_binary(
   name = "visualize",
   srcs = ["visualize.cpp"],
@@ -73,5 +86,37 @@ cc_binary(
     "//episode:frames",
     "//episode:project",
     "//third_party:opencv",
+  ],
+)
+
+filegroup(
+  name = "mediapipe_graph",
+  data = ["mediapipe_graph.pbtxt"],
+)
+
+cc_binary(
+  name = "mediapipe",
+  srcs = ["mediapipe.cpp"],
+  data = [
+    ":mediapipe_graph",
+    "//mediapipe/modules/face_detection:face_detection_short_range.tflite",
+    "//mediapipe/modules/face_landmark:face_landmark.tflite",
+    "//mediapipe/modules/hand_landmark:hand_landmark_full.tflite",
+    "//mediapipe/modules/hand_landmark:handedness.txt",
+    "//mediapipe/modules/holistic_landmark:hand_recrop.tflite",
+    "//mediapipe/modules/pose_detection:pose_detection.tflite",
+    "//mediapipe/modules/pose_landmark:pose_landmark_heavy.tflite",
+  ],
+  deps = [
+    "@mediapipe//mediapipe/framework:calculator_framework",
+    "@mediapipe//mediapipe/framework/formats:image_frame",
+    "@mediapipe//mediapipe/framework/formats:image_frame_opencv",
+    "@mediapipe//mediapipe/framework/formats:landmark_cc_proto",
+    "@mediapipe//mediapipe/framework/port:file_helpers",
+    "@mediapipe//mediapipe/framework/port:opencv_highgui",
+    "@mediapipe//mediapipe/framework/port:opencv_video",
+    "@mediapipe//mediapipe/framework/port:parse_text_proto",
+    "@mediapipe//mediapipe/framework/port:status",
+    "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_cpu_graph_deps",
   ],
 )

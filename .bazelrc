@@ -1,2 +1,10 @@
-build --cxxopt='-std=c++20' --cxxopt='-Wall' --cxxopt='-Werror' --cxxopt='-fdiagnostics-color=always'
+# Tensorflow needs remote repo
+common --experimental_repo_remote_exec
+
+build --cxxopt='-std=c++20'
+build --cxxopt='-Wall'
+build --cxxopt='-fdiagnostics-color=always'
+build -c opt
+build --define MEDIAPIPE_DISABLE_GPU=1
+
 test --test_output=errors
