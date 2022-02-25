@@ -4,7 +4,6 @@ cc_binary(
   name = "extract",
   srcs = ["extract.cpp"],
   deps = [
-    ":pose2d",
     ":pose3d",
     ":pose_extractor",
     ":triangulation",
@@ -14,6 +13,24 @@ cc_binary(
     "//episode:frames",
     "//episode:project",
   ]
+)
+
+filegroup(
+  name = "mediapipe_graph",
+  data = ["mediapipe_graph.pbtxt"],
+)
+
+filegroup(
+  name = "mediapipe_modules",
+  data = [
+    "//mediapipe/modules/face_detection:face_detection_short_range.tflite",
+    "//mediapipe/modules/face_landmark:face_landmark.tflite",
+    "//mediapipe/modules/hand_landmark:hand_landmark_full.tflite",
+    "//mediapipe/modules/hand_landmark:handedness.txt",
+    "//mediapipe/modules/holistic_landmark:hand_recrop.tflite",
+    "//mediapipe/modules/pose_detection:pose_detection.tflite",
+    "//mediapipe/modules/pose_landmark:pose_landmark_heavy.tflite",
+  ],
 )
 
 cc_library(
@@ -40,11 +57,21 @@ cc_library(
   name = "pose_extractor",
   hdrs = ["pose_extractor.h"],
   srcs = ["pose_extractor.cpp"],
+  data = [
+    ":mediapipe_graph",
+    ":mediapipe_modules",
+  ],
   deps = [
-    ":pose2d",
-    "@lw//lw/flags",
+    ":pose3d",
     "//third_party:opencv",
-    "//third_party:openpose",
+    "@lw//lw/err",
+    "@mediapipe//mediapipe/framework:calculator_framework",
+    "@mediapipe//mediapipe/framework/formats:image_frame",
+    "@mediapipe//mediapipe/framework/formats:landmark_cc_proto",
+    "@mediapipe//mediapipe/framework/port:file_helpers",
+    "@mediapipe//mediapipe/framework/port:parse_text_proto",
+    "@mediapipe//mediapipe/framework/port:status",
+    "@mediapipe//mediapipe/graphs/holistic_tracking:holistic_tracking_cpu_graph_deps",
   ],
 )
 
@@ -89,23 +116,12 @@ cc_binary(
   ],
 )
 
-filegroup(
-  name = "mediapipe_graph",
-  data = ["mediapipe_graph.pbtxt"],
-)
-
 cc_binary(
   name = "mediapipe",
   srcs = ["mediapipe.cpp"],
   data = [
     ":mediapipe_graph",
-    "//mediapipe/modules/face_detection:face_detection_short_range.tflite",
-    "//mediapipe/modules/face_landmark:face_landmark.tflite",
-    "//mediapipe/modules/hand_landmark:hand_landmark_full.tflite",
-    "//mediapipe/modules/hand_landmark:handedness.txt",
-    "//mediapipe/modules/holistic_landmark:hand_recrop.tflite",
-    "//mediapipe/modules/pose_detection:pose_detection.tflite",
-    "//mediapipe/modules/pose_landmark:pose_landmark_heavy.tflite",
+    ":mediapipe_modules",
   ],
   deps = [
     "@mediapipe//mediapipe/framework:calculator_framework",

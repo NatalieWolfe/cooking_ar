@@ -1,8 +1,9 @@
 #pragma once
 
-#include <openpose/headers.hpp>
+#include <memory>
 
-#include "extraction/pose2d.h"
+#include "extraction/pose3d.h"
+#include "mediapipe/framework/calculator_framework.h"
 
 namespace extraction {
 
@@ -20,9 +21,15 @@ public:
    *
    * @param frame_path The file path to the image.
    */
-  std::vector<Pose2d> get(const std::filesystem::path& frame_path);
+  std::vector<Pose3d> get(const std::filesystem::path& frame_path);
 private:
-  op::Wrapper _openpose;
+  std::vector<Pose3d> _data_to_poses();
+
+  std::unique_ptr<mediapipe::CalculatorGraph> _graph;
+  mediapipe::OutputStreamPoller _pose_world_landmarks;
+  mediapipe::OutputStreamPoller _face_landmarks;
+  mediapipe::OutputStreamPoller _left_paw_landmarks;
+  mediapipe::OutputStreamPoller _right_paw_landmarks;
 };
 
 }
